@@ -1,0 +1,25 @@
+<File Name="OneShotTimer.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimeBoundedActivity, Jitter, DataFreshness, TolaratedDelay, ClockDrift">
+  <Fragment>
+package saito.sashimi.realtime;
+public abstract class OneShotTimer extends Timer {
+public OneShotTimer( HighResolutionTime hrtimeDelay, int id )
+{
+    super( hrtimeDelay, id );
+}
+protected void executeTimer()
+{
+	if ((m_delay != null) &amp;&amp; m_isEnabled)
+ 	{
+		disable();
+		stop();
+		m_isRunning = true;
+		//try { Thread.sleep( m_delay.getMilliseconds() ); } catch (InterruptedException err) {}
+		//__Simulation.sleep(m_delay.getMilliseconds());
+		this.runTimer();
+		m_isRunning = false;
+	}
+}
+}
+  </Fragment>
+</File>

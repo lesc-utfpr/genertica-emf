@@ -1,0 +1,203 @@
+<File Name="FixedPriorityHWScheduler.java" OutputDirectory="saito.sashimi.realtime" Aspects="SchedulingSupport">
+  <Fragment>
+package saito.sashimi.realtime;
+
+import saito.sashimi.FemtoJavaInterruptSystem;
+import saito.sashimi.FemtoJavaScheduler;
+import saito.sashimi.IntrInterface;
+
+public class FixedPriorityHWScheduler extends Scheduler implements IntrInterface {
+	
+	private static AbsoluteTime auxTaskActivationTime = new AbsoluteTime(0,0,0);
+	private static boolean fromINT = false;
+// Elias.Inicio 12.07.2005 - Tratamento de tarefa Async
+//	private int eventCode = 0;
+// Elias.Fim 12.07.2005 - Tratamento de tarefa Async
+
+	protected int getContextOffsetForStaticMethod() { return 11; }
+	protected int getContextOffsetForVirtualMethod() { return 13; }
+	
+	public boolean isFeasible() {
+		return true;
+	}
+	
+	public void runScheduler() {
+		// Disable interrupt system first !
+		FemtoJavaInterruptSystem.setEnable(0x6F); //x1101010
+		//FemtoJavaInterruptSystem.setEnable(0);
+        
+        // The initSystem() context must be saved in the first runScheduler() call
+        if (m_currentTask == -1)
+        	saveMainContext();
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+        else
+        	if (m_PeriodicTaskList[m_currentTask] != null)
+        	{
+                // verify deadline misses
+        		auxTaskActivationTime.set(m_PeriodicTaskList[m_currentTask].getResumeTime());
+        		auxTaskActivationTime.add(m_PeriodicTaskList[m_currentTask].getReleaseParameters().getDeadline());
+        		
+        		if (auxTaskActivationTime.compareTo(Clock.getTime()) &lt; 0)
+        		{
+        			// The task deadline was missed
+        			processDeadlineMisses(m_PeriodicTaskList[m_currentTask]);
+        			// reinitialize task stack
+    				m_PeriodicTaskList[m_currentTask].initializeStack();
+        		}
+        		else
+        		{
+                    // save current task context
+        			m_PeriodicTaskList[m_currentTask].saveContext();
+                    // Advise current task that it will lose the context
+           			m_PeriodicTaskList[m_currentTask].loseContext();
+        		}
+        	}
+  </Fragment>
+  <Fragment>
+        // Signal hardware scheduler that will occur a context task switch 
+        if (fromINT &amp;&amp; (m_currentTask != -1))
+        	// signal that actual running task will be preempted
+        	FemtoJavaScheduler.preemptCurrentTask(1); 
+        else
+            // signal that actual running task is finished
+        	FemtoJavaScheduler.preemptCurrentTask(0);
+        
+        fromINT = false;
+        // get next task from hardware scheduler
+        m_currentTask = FemtoJavaScheduler.getNextTask();
+  </Fragment>
+  <Fragment Aspects="TimingAttributes">
+       if ((m_currentTask != -1) &amp;&amp;
+           (((HWRealtimeThread)m_AperiodicTaskList[m_currentTask]).eventCode != 0) &amp;&amp; 
+           (m_AperiodicTaskList[m_currentTask].isRunning() == false)  ) 
+       {
+    	   m_AperiodicTaskList[m_currentTask].initializeStack();
+       }
+  </Fragment>
+  <Fragment>
+        // Enable interrupt system again
+        FemtoJavaInterruptSystem.setEnable(0x2F); //x0101111 -> REC=0 EA=1 ES=0 ET1=1 EX1=1 ET0=1 EX0=1 
+        if (m_currentTask != -1) {
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+        	m_PeriodicTaskList[m_currentTask].restoreContext();
+  </Fragment>
+  <Fragment>
+        }
+        else
+        	restoreMainContext();
+	}
+	
+	protected void processDeadlineMisses(RealtimeThread task)
+	{
+        // A deadline was missed !
+		task.exceptionTask();
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+		// try to synchronize the current Time with task next Resume Time
+		if (task.getReleaseParameters() instanceof PeriodicParameters)
+		{
+			while (task.getResumeTime().compareTo(Clock.getTime()) &lt; 0)
+				task.setNextPeriodResumeTime();
+		}
+		else
+		{
+  </Fragment>
+  <Fragment>
+			// The aperiodic task are removed from Task List
+			removeFromFeasibility(task);
+			m_currentTask = -1;
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+		}
+  </Fragment>
+  <Fragment>
+	}
+	
+	public void startTaskInHW(RealtimeThread task) 
+	{
+		FemtoJavaScheduler.startTask(indexOf(task)); // Signal to hardware scheduler
+		FemtoJavaInterruptSystem.setEnable(0x2F);
+	}
+	
+	protected boolean addToFeasibility(RealtimeThread schedulable) {
+		boolean result = super.addToFeasibility(schedulable);
+		if (result)
+		{
+			// Hardware Scheduler control word format:
+			//
+			//    PPPP0000EEEEEEEE00000000000IIIIS
+			//
+			// where:
+			//   PPPP        - 4 bits representing task priority
+			//   0000        - 4 bits not used
+			//   EEEEEEEE    - 8 bits representing an event
+			//   00000000000 - 11 bits not used
+			//   IIII        - 4 bits representing task ID
+			//   S           - 1 bit representing if task is synchronous (periodic or ??? one-shot) or asynchronous
+			
+			int ctrlWord = ((((PriorityParameters)schedulable.getSchedulingParameters()).getPriority() &amp; 0xF) &lt;&lt; 28);
+			//ctrlWord |= (schedulable.eventCode &amp; FF) &lt;&lt; 16; // not used ???? 
+// Elias.Inicio 12.07.2005 - Tratamento de tarefa Async
+			ctrlWord |= ( (((HWRealtimeThread)schedulable).eventCode &lt;&lt; 16) &amp; 0x00ff0000); 
+// Elias.Fim 12.07.2005 - Tratamento de tarefa Async
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+			ctrlWord |= (((m_PeriodicListCount-1) &amp; 0xF) &lt;&lt; 1);
+  </Fragment>
+  <Fragment>
+			if (((HWRealtimeThread)schedulable).eventCode == 0)
+				ctrlWord |= 1;
+			
+			HighResolutionTime startTime = ((PeriodicParameters)schedulable.getReleaseParameters()).getStart();
+			RelativeTime period = ((PeriodicParameters)schedulable.getReleaseParameters()).getPeriod();
+			
+            // Hardware Scheduler Control Word
+			FemtoJavaScheduler.putTaskParam(ctrlWord);
+			// Task's start time
+			FemtoJavaScheduler.putTaskParam(startTime.m_iDays);
+			FemtoJavaScheduler.putTaskParam(startTime.m_iMillis);
+			FemtoJavaScheduler.putTaskParam(startTime.m_iNanos);
+            // Task's start time
+			FemtoJavaScheduler.putTaskParam(period.m_iDays);
+			FemtoJavaScheduler.putTaskParam(period.m_iMillis);
+			FemtoJavaScheduler.putTaskParam(period.m_iNanos);
+		}
+		return result;
+	}
+	
+	public static int getMaxPriority()
+	{
+		return MAX_PERIODIC_TASKS;
+	}
+	
+	public static int getMinPriority()
+	{
+		return 0;
+	}
+
+	public static int getNormPriority()
+	{
+		return MAX_PERIODIC_TASKS / 2;
+	}
+	
+	protected boolean removeFromFeasibility(RealtimeThread schedulable) {
+		FemtoJavaScheduler.removeTask(indexOf(schedulable));
+		return super.removeFromFeasibility(schedulable);
+	}
+	
+	public void int0Method() 
+	{
+		// Disable interrupt system
+		FemtoJavaInterruptSystem.setEnable(0x6F);
+		fromINT = true;
+		Scheduler.getDefaultScheduler().runScheduler();
+	}
+	
+	// For SASHIMI compatibility
+	public void int1Method() {}
+	public void spiMethod() {}
+}
+  </Fragment>
+</File>

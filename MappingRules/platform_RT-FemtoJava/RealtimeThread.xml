@@ -1,0 +1,342 @@
+<File Name="RealtimeThread.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimingAttributes, PeriodicTiming">
+  <Fragment>
+package saito.sashimi.realtime;
+import saito.sashimi.*;
+public abstract class RealtimeThread implements Runnable, SOInterface {
+
+private ReleaseParameters m_releaseParameters = null;
+private SchedulingParameters m_schedulingParameters = null;
+private boolean m_isStarted = false;
+private boolean m_isFinalized = false;
+private boolean m_isRunning = false;
+private boolean m_isBlocked = false;
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+private boolean m_waitingNextPeriod = false; 
+  </Fragment>
+  <Fragment>
+private AsyncEvent m_waitingForEvent = null;
+private boolean m_ConsumeEvent = false;
+private int m_BaseStackPointer;
+private int m_StackPointer;
+protected AbsoluteTime m_ResumeTime = null;
+protected AbsoluteTime m_ActiveTime = null; 
+protected RelativeTime m_PreviousProcessTime = null;
+
+public RealtimeThread()
+{
+	//initializeStack();
+}
+public RealtimeThread( SchedulingParameters schedulingParameters )
+{
+    m_schedulingParameters	= schedulingParameters;
+    //initializeStack();
+}
+public RealtimeThread( SchedulingParameters schedulingParameters, 
+	ReleaseParameters releaseParameters )
+{
+    m_schedulingParameters	= schedulingParameters;
+    m_releaseParameters = releaseParameters;
+    //initializeStack();
+}
+public abstract void mainTask();
+public abstract void exceptionTask();
+protected abstract void initializeStack();
+public void addToFeasibility()
+{
+	initializeStack();
+    Scheduler.getDefaultScheduler().addToFeasibility( this );
+}
+public ReleaseParameters getReleaseParameters()
+{
+    return m_releaseParameters;
+}
+public SchedulingParameters getSchedulingParameters()
+{
+    return m_schedulingParameters;
+}
+public void removeFromFeasibility()
+{
+    Scheduler.getDefaultScheduler().removeFromFeasibility( this );
+}
+public void setReleaseParameters( ReleaseParameters releaseParameters )
+{
+    m_releaseParameters = releaseParameters;
+}
+public void setSchedulingParameters( SchedulingParameters scheduling )
+{
+    m_schedulingParameters = scheduling;
+}
+public static void sleep( HighResolutionTime hrtime ) throws InterruptedException
+{
+	int Days = 0;
+	int Millis = 0;
+	int Nanos = 0;
+	
+	Clock.getTime();
+	if (hrtime instanceof RelativeTime)
+	{
+		// Add sleep to now
+		Days = Clock.m_now.m_iDays;
+		Millis = Clock.m_now.m_iMillis;
+		Nanos = Clock.m_now.m_iNanos + hrtime.m_iNanos;
+		if (Nanos > HighResolutionTime.c_iNanosPerMillis)
+		{
+            // Next line generate insctruction not supported in FemtoJava
+			//Nanos -= HighResolutionTime.c_iNanosPerMillis;  
+			Nanos = (Clock.m_now.m_iNanos + hrtime.m_iNanos) - HighResolutionTime.c_iNanosPerMillis;
+			Millis++;
+		}
+		// Operate over milliseconds
+		Millis += hrtime.m_iMillis;
+		if (Millis > HighResolutionTime.c_iMillisPerDay)
+		{
+			Millis = Millis - HighResolutionTime.c_iMillisPerDay;
+			Days++;		
+		}
+		// Operate over days
+		Days += hrtime.m_iDays;
+	}
+	else
+	{
+		Days = hrtime.m_iDays;
+		Millis = hrtime.m_iMillis;
+		Nanos = hrtime.m_iNanos;
+	}
+	while ((Days > Clock.getTime().m_iDays)
+			|| ((Days == Clock.m_now.m_iDays) &amp;&amp; (Millis > Clock.m_now.m_iMillis))
+			|| ((Days == Clock.m_now.m_iDays) &amp;&amp; (Millis == Clock.m_now.m_iMillis) &amp;&amp; (Nanos > Clock.m_now.m_iNanos)))
+		FemtoJava.sleep();
+}
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+public boolean waitForNextPeriod()
+{
+//	__Simulation.print("\n[WFN] BEGIN " + Thread.currentThread());
+	m_waitingNextPeriod = true;
+	m_ActiveTime.set(0,0,0);
+	m_PreviousProcessTime.set(0,0,0);
+	setNextPeriodResumeTime();
+	Scheduler.getDefaultScheduler().m_Processing = true;
+	Scheduler.getDefaultScheduler().runScheduler();
+//	__Simulation.print("\n[WFN] END " + Thread.currentThread());
+	return true;
+}
+  </Fragment>
+  <Fragment>
+public void start()
+{
+	m_isStarted = true;
+	m_isFinalized = false;
+	m_isRunning = false;
+	m_isBlocked = false;
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+	if (m_releaseParameters instanceof PeriodicParameters) {
+		HighResolutionTime startTime = ((PeriodicParameters)m_releaseParameters).getStart();
+		if (startTime != null)
+			m_ResumeTime.set(startTime);
+	}
+	else
+  </Fragment>
+  <Fragment Aspects="TimingAttributes">
+		if ((m_releaseParameters instanceof AperiodicParameters)
+		    || (m_releaseParameters instanceof SporadicParameters)) {
+			m_ResumeTime.set(Clock.getTime());
+		}
+  </Fragment>
+  <Fragment>
+//	__Simulation.startThread(this); //MAW.DEBUG
+}
+
+protected void internalFinish()
+{
+	m_isRunning = false;
+	m_isFinalized = true;
+}
+
+public void finish()
+{
+	internalFinish();
+//	__Simulation.finishThread(); // MAW.DEBUG
+	// After task finish its code, the scheduler is invoked
+	Scheduler.getDefaultScheduler().m_Processing = true;
+	Scheduler.getDefaultScheduler().runScheduler();
+}
+
+public boolean isFinished()
+{
+	return m_isFinalized;
+}
+
+public boolean isBlocked()
+{
+	return m_isBlocked;
+}
+
+public void blockThread()
+{
+	m_isBlocked = true;
+}
+
+public void unblockThread()
+{
+	m_isBlocked = false;
+}
+
+public boolean isStarted()
+{
+	return m_isStarted;
+}
+
+public boolean isRunning()
+{
+	return m_isRunning;
+}
+
+public void saveContext()
+{
+    if (m_isRunning)
+    {
+    	int aux = FemtoJavaSO.saveCTX();
+    	if (aux &lt;= (m_BaseStackPointer &amp; 0xFFFF))
+    		// This offset repesents the return PC from waitForNextPeriod().
+    		// What happend if the runScheduler() is invoked by tf0Method() ????
+    		m_StackPointer = aux + Scheduler.getDefaultScheduler().getContextOffsetForVirtualMethod();
+    }
+}
+
+public void loseContext()
+{
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+	if (!m_waitingNextPeriod) {
+		// Accumulate processtime
+		AbsoluteTime tmp = Clock.getTime();
+		m_PreviousProcessTime.add(tmp.getDays(), tmp.getMilliseconds(), tmp.getNanoseconds());
+		m_PreviousProcessTime.subtract(m_ActiveTime.getDays(), 
+                                       m_ActiveTime.getMilliseconds(), 
+                                       m_ActiveTime.getNanoseconds());
+	}
+  </Fragment>
+  <Fragment>
+	m_isRunning = false;
+}
+
+public void restoreContext()
+{
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+	m_waitingNextPeriod = false;
+  </Fragment>
+  <Fragment>
+	m_isRunning = true;
+	m_ActiveTime.set(Clock.getTime());
+	Scheduler.getDefaultScheduler().m_Processing = false;
+	FemtoJavaSO.restoreCTX(m_StackPointer);
+}
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+public void setNextPeriodResumeTime()
+{
+	if (m_releaseParameters instanceof PeriodicParameters)
+	{
+		m_ResumeTime.add(((PeriodicParameters)m_releaseParameters).getPeriod());
+	}
+}
+  </Fragment>
+  <Fragment>
+public AbsoluteTime getResumeTime()
+{
+	return m_ResumeTime;
+}
+
+public void setResumeTime(AbsoluteTime resumeTime)
+{
+	m_ResumeTime.set(resumeTime);
+}
+
+public AbsoluteTime getActiveTime()
+{
+	return m_ActiveTime;
+}
+
+public void setActiveTime(AbsoluteTime activeTime)
+{
+	m_ActiveTime.set(activeTime);
+}
+
+public RelativeTime getPreviousProcessTime()
+{
+	return m_PreviousProcessTime;
+}
+
+public void run()
+{	
+	mainTask();
+}
+
+//Marco.Inicio - 07/06/2006 - Integration with asinc events systems
+public boolean waitForEvent(AsyncEvent event, boolean consumeEvent) 
+{
+	m_isBlocked = true;
+	m_waitingForEvent = event;
+	m_ConsumeEvent = consumeEvent;
+	if (AsyncEventsMechanism.mechanism.addWaitingTask(this)) {
+		Scheduler.getDefaultScheduler().m_Processing = true;
+		Scheduler.getDefaultScheduler().runScheduler();
+		return true;
+	}
+	else {
+		m_isBlocked = false;
+		m_waitingForEvent = null;
+		m_ConsumeEvent = false;
+		return false;
+	}
+}
+
+public boolean waitForEvent(AsyncEvent event, boolean consumeEvent, RelativeTime timeout)
+{
+	// This feature cannot be implemented due to absence of a third timer.
+	// Up to now, FemtoJava has two timers: 
+	// 1. Used by Scheduler, to control scheduler activations;
+	// 2. Used by AbstractPoolingServer descendents, to contro budget timeout.
+
+	m_isBlocked = true;
+	m_waitingForEvent = event;
+	m_ConsumeEvent = consumeEvent;
+	Scheduler.getDefaultScheduler().m_Processing = true;	
+	//********************
+	// Setup timeout here
+	//********************
+	if (AsyncEventsMechanism.mechanism.addWaitingTask(this))
+		Scheduler.getDefaultScheduler().runScheduler();
+	else {
+		m_isBlocked = false;
+		m_waitingForEvent = null;
+		m_ConsumeEvent = false;
+		Scheduler.getDefaultScheduler().m_Processing = false;
+	}
+	// m_waitingForEvent == true means that the timeout was occured
+    // m_waitingForEvent == false means that the event was occured
+	return m_waitingForEvent == null;
+}
+
+public boolean isWaitingForEvent(AsyncEvent event)
+{
+	return m_waitingForEvent == event;
+}
+
+public boolean canConsumeEvent() {
+	return m_ConsumeEvent;
+}
+//Marco.Fim - 07/06/2006 - Integration with asinc events systems
+//-------------------------------------------------------------------------//
+// Only for simulation purposes
+public void initProcess(int value, int address) {}
+public void restoreCTX(int process) {}
+public int saveCTX() {return 0;}
+}
+  </Fragment>
+</File>

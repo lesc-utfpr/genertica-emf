@@ -1,0 +1,155 @@
+<File Name="Scheduler.java" OutputDirectory="saito.sashimi.realtime" Aspects="SchedulingSupport">
+  <Fragment>
+    package saito.sashimi.realtime;
+    import saito.sashimi.*;
+    
+    public abstract class Scheduler implements TimerInterface  {
+       protected static Scheduler c_defaultScheduler = null;
+       protected static int m_MainBaseStackPointer = 0xFFFF;
+    
+       protected int m_currentTask = -1;
+       protected boolean m_Processing = false;
+  </Fragment>
+  <Fragment Aspects="TimingAttributes">
+        public final static int MAX_APERIODIC_TASKS = 16;
+        protected static RealtimeThread m_AperiodicTaskList[] = {null, null, null, null, null, null, null, null,
+                                                                 null, null, null, null, null, null, null, null};
+        protected int m_AperiodicListCount = 0;
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+        public final static int MAX_PERIODIC_TASKS = 16;
+        protected static RealtimeThread m_PeriodicTaskList[] = {null, null, null, null, null, null, null, null,
+                                                                null, null, null, null, null, null, null, null};
+        protected int m_PeriodicListCount = 0;
+  </Fragment>
+  <Fragment>
+        public abstract boolean isFeasible();
+        public abstract void runScheduler();
+        protected abstract int getContextOffsetForStaticMethod();
+        protected abstract int getContextOffsetForVirtualMethod();
+      
+        protected static int indexOf(RealtimeThread list[], int listCount, RealtimeThread schedulable) {
+          int i = 0;
+          for (; (i &lt; listCount) &amp;&amp; (list[i] != schedulable); i++);
+          if (i &lt; listCount)
+          	return i;
+          else
+          	return -1;
+        }
+      
+        protected static void addToListOrderByPriority(RealtimeThread list[], int listCount, RealtimeThread schedulable, int priority) {
+          int i = 0;
+          for(; (i &lt; listCount) &amp;&amp; (priority &lt;= ((PriorityParameters)list[i].getSchedulingParameters()).getPriority()); i++);
+          if (i &lt; listCount) {
+            for(int j = listCount; j > i; j--)
+               list[j] = list[j-1];
+          }
+          list[i] = schedulable;
+        }
+    
+        protected boolean addToFeasibility( RealtimeThread schedulable ) {
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+          if ((m_PeriodicListCount &lt; (MAX_PERIODIC_TASKS-1)) &amp;&amp; (indexOf(schedulable) == -1)) {
+            m_PeriodicTaskList[m_PeriodicListCount] = schedulable;
+            m_PeriodicListCount++;
+            return true;
+          }
+          else
+  </Fragment>
+  <Fragment>
+            return false;
+        }
+
+        protected boolean removeFromFeasibility( RealtimeThread schedulable ) { 
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+          if (m_PeriodicListCount > 0) {
+            int i = 0;
+            for(; (i &lt; m_PeriodicListCount) &amp;&amp; (m_PeriodicTaskList[i] != schedulable); i++);
+            if (i &lt; m_PeriodicListCount) {
+              m_PeriodicTaskList[i] = null;
+              m_PeriodicListCount--;
+              if (i &lt; m_PeriodicListCount) {
+                int j = i;
+                for(; (j &lt;= m_PeriodicListCount); j++)
+                   m_PeriodicTaskList[j] = m_PeriodicTaskList[j+1];
+                m_PeriodicTaskList[j] = null;
+              }
+              return true;
+            }
+            else
+              return false;
+          }
+          else
+  </Fragment>
+  <Fragment>
+            return false;
+        }
+        
+        public static Scheduler getDefaultScheduler() {
+          return c_defaultScheduler;
+        }
+        
+        protected int indexOf( RealtimeThread schedulable ) {
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+          int i = 0;
+          for (; (i &lt; MAX_PERIODIC_TASKS) &amp;&amp; (m_PeriodicTaskList[i] != schedulable); i++);
+          if (i &lt; MAX_PERIODIC_TASKS)
+            return i;
+          else
+  </Fragment>
+  <Fragment>
+            return -1;
+        }
+        
+        public boolean isAddedToFeasibility( RealtimeThread schedulable ) {
+          return ( indexOf(schedulable) != -1 );
+        }
+        
+        public static void setDefaultScheduler( Scheduler scheduler ) {
+          c_defaultScheduler = scheduler;
+        }
+        
+        public static void saveMainContext() {
+          m_MainBaseStackPointer = FemtoJavaSO.saveCTX() + getDefaultScheduler().getContextOffsetForStaticMethod();
+        }
+        
+        public static void restoreMainContext() {
+          c_defaultScheduler.m_Processing = false;
+          FemtoJavaSO.restoreCTX(m_MainBaseStackPointer);
+        }
+        
+        public boolean isAllTasksFinished() {
+          boolean result = true;
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+          for (int i=0; (i &lt; m_PeriodicListCount) &amp;&amp; result; i++)
+            result &amp;= m_PeriodicTaskList[i].isFinished();
+  </Fragment>
+  <Fragment>
+          return result;
+        }
+        
+        public void setupTimer() {
+          FemtoJavaInterruptSystem.setEnable(0x2F); //x0101111 -> REC=0 EA=1 ES=0 ET1=1 EX1=1 ET0=1 EX0=1 
+          FemtoJavaTimer.setTimer0(100);
+          FemtoJavaTimer.startTimer0();
+        }
+        
+        public void tf0Method() {
+          FemtoJavaInterruptSystem.setEnable(0x6F); //x1101111 -> REC=1 EA=1 ES=0 ET1=1 EX1=1 ET0=1 EX0=1
+          FemtoJavaTimer.stopTimer0();
+          if (!c_defaultScheduler.m_Processing) {
+            c_defaultScheduler.m_Processing = true;
+            FemtoJavaInterruptSystem.setEnable(0x2F); //x0101111 -> REC=0 EA=1 ES=0 ET1=1 EX1=1 ET0=1 EX0=1
+            c_defaultScheduler.runScheduler();
+            c_defaultScheduler.m_Processing = false;
+          }
+        }
+        
+        public void tf1Method() {} // not used ! Used in Timer objects
+    }
+  </Fragment>
+</File>

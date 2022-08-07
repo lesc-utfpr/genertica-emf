@@ -1,0 +1,44 @@
+<File Name="InterruptPoolingMechanism.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimingAttributes, PeriodicTiming">
+  <Fragment>
+package saito.sashimi.realtime;
+import saito.sashimi.*;
+public abstract class InterruptPoolingMechanism extends RealtimeThread {
+
+	private static AbsoluteTime m_intrpoolmechResumeTime = new AbsoluteTime(0,5,0);
+	private static AbsoluteTime m_intrpoolmechActiveTime = new AbsoluteTime(0,0,0);
+	private static RelativeTime m_intrpoolmechPrevProcTime = new RelativeTime(0,0,0);
+	public InterruptPoolingMechanism() {
+		super();
+		m_ResumeTime = m_intrpoolmechResumeTime;
+		m_ActiveTime = m_intrpoolmechActiveTime;
+		m_PreviousProcessTime = m_intrpoolmechPrevProcTime;	
+	}
+	public InterruptPoolingMechanism(SchedulingParameters schedulingParameters) {
+		super(schedulingParameters);
+		m_ResumeTime = m_intrpoolmechResumeTime;
+		m_ActiveTime = m_intrpoolmechActiveTime;
+		m_PreviousProcessTime = m_intrpoolmechPrevProcTime;	
+	}
+	public InterruptPoolingMechanism(SchedulingParameters schedulingParameters,
+			ReleaseParameters releaseParameters) {
+		super(schedulingParameters, releaseParameters);
+		m_ResumeTime = m_intrpoolmechResumeTime;
+		m_ActiveTime = m_intrpoolmechActiveTime;
+		m_PreviousProcessTime = m_intrpoolmechPrevProcTime;	
+	}
+	public final void mainTask() {
+		while (true) {
+			for(int i = 4; i &lt; 8; i++)
+				if (FemtoJavaIO.read(i) != 0)
+					handleDetectedInterrupt(i);
+				
+			waitForNextPeriod();
+		}
+	}
+	public void exceptionTask() {
+	}
+	protected abstract void handleDetectedInterrupt(int intrNumber);
+}
+  </Fragment>
+</File>

@@ -1,0 +1,95 @@
+<File Name="TimeTriggeredScheduler.java" OutputDirectory="saito.sashimi.realtime" Aspects="SchedulingSupport">
+  <Fragment>
+package saito.sashimi.realtime;
+
+import saito.sashimi.FemtoJavaInterruptSystem;
+import saito.sashimi.FemtoJavaTimer;
+
+public class TimeTriggeredScheduler extends Scheduler {
+	
+	protected static RelativeTime m_ActivationTimer[] = {null, null, null, null, null};
+	protected static AbsoluteTime auxTime = new AbsoluteTime(0,0,0);
+	protected int m_nextTask = 0;
+	protected RelativeTime m_schedulePeriod = null;
+	
+	public TimeTriggeredScheduler(RelativeTime schedulePeriod) {
+		m_schedulePeriod = schedulePeriod;
+	}
+	
+	protected int getContextOffsetForStaticMethod() { return 11; }
+	protected int getContextOffsetForVirtualMethod() { return 13; }
+
+	public boolean isFeasible() {
+		return false;
+	}
+
+	public void runScheduler() {
+		FemtoJavaInterruptSystem.setEnable(0x6A); //x1101010
+		FemtoJavaTimer.stopTimer0();
+		
+		if (m_currentTask == -1)
+			saveMainContext();
+		else
+		{
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+            // save current task context
+			m_PeriodicTaskList[m_currentTask].saveContext();
+            // Advise current task that it will lose the context
+   			m_PeriodicTaskList[m_currentTask].loseContext();
+  </Fragment>
+  <Fragment>
+   			m_ActivationTimer[m_currentTask].add(m_schedulePeriod);
+		}
+		
+		m_currentTask = m_nextTask;
+		m_nextTask = m_currentTask + 1;
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+		if (m_nextTask >= m_PeriodicListCount)
+			m_nextTask = 0;
+  </Fragment>
+  <Fragment>
+		if (m_ActivationTimer[m_currentTask].compareTo(Clock.getTime()) &lt;= 0)
+		{
+			programNextTimeTick(m_ActivationTimer[m_nextTask]);
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+			m_PeriodicTaskList[m_currentTask].restoreContext();
+  </Fragment>
+  <Fragment>
+		}
+		else
+		{
+			m_nextTask = m_currentTask;
+			m_currentTask = -1;
+			programNextTimeTick(m_ActivationTimer[m_nextTask]);
+			restoreMainContext();
+		}
+	}
+	
+	public void programNextTimeTick(RelativeTime nextTime)
+	{
+		auxTime.set(nextTime);
+		auxTime.subtract(Clock.getTime());
+		
+		FemtoJavaInterruptSystem.setEnable(0x2A);
+		FemtoJavaTimer.setTimer0(auxTime.convertToFJTimeoutValue()-170);
+		FemtoJavaTimer.startTimer0();
+	}
+	
+	public boolean addToFeasibility(RealtimeThread schedulable, RelativeTime activationTime, boolean initStack) {
+		if (initStack)
+			schedulable.initializeStack();
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+		m_ActivationTimer[m_PeriodicListCount] = activationTime;
+		m_PeriodicTaskList[m_PeriodicListCount] = schedulable;
+		m_PeriodicListCount++;
+  </Fragment>
+  <Fragment>
+		return true;
+	}	
+}
+  </Fragment>
+</File>

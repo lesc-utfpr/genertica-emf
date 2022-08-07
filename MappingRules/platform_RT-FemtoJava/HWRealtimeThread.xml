@@ -1,0 +1,27 @@
+<File Name="HWRealtimeThread.java" OutputDirectory="saito.sashimi.realtime" Aspects="SchedulingSupport">
+  <Fragment>
+package saito.sashimi.realtime;
+
+public abstract class HWRealtimeThread extends RealtimeThread {
+  public int eventCode = 0;
+
+	public HWRealtimeThread( SchedulingParameters schedulingParameters, ReleaseParameters releaseParameters ) {
+		super(schedulingParameters, releaseParameters);
+	}
+	
+	public void start() {
+		super.start();
+		if (Scheduler.c_defaultScheduler instanceof FixedPriorityHWScheduler)
+			((FixedPriorityHWScheduler)Scheduler.c_defaultScheduler).startTaskInHW(this);
+	}
+        
+        protected void internalFinish()
+        {
+            /* O runSched precisa para decidir se roda o initializeStack */
+            super.internalFinish();
+            if (Scheduler.c_defaultScheduler instanceof FixedPriorityHWScheduler)
+                Scheduler.getDefaultScheduler().runScheduler();
+        }
+}
+  </Fragment>
+</File>

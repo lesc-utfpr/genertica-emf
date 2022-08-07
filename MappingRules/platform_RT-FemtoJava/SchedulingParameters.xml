@@ -1,0 +1,9 @@
+<File Name="SchedulingParameters.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="SchedulingSupport, TimingAttributes, PeriodicTiming">
+  <Fragment>
+     package saito.sashimi.realtime;
+     public abstract class SchedulingParameters {
+       public SchedulingParameters() {}
+     }
+  </Fragment>
+</File>

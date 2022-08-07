@@ -1,0 +1,54 @@
+<File Name="AbsoluteTime.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="SchedulingSupport, TimingAttributes, PeriodicTiming, TimeBoundedActivity, 
+               Jitter, DataFreshness, TolaratedDelay, ClockDrift">
+  <Fragment>
+    package saito.sashimi.realtime;
+
+    public class AbsoluteTime extends HighResolutionTime {
+
+      public AbsoluteTime(){
+        set( 0, 0, 0 );
+      }
+
+      public AbsoluteTime( AbsoluteTime time ){
+        set( time );
+      }
+
+      public AbsoluteTime( int iDays, int iMillis, int iNanos ) {
+        set( iDays, iMillis, iNanos );
+      }
+
+      public AbsoluteTime add( int iDays, int iMillis, int iNanos ) {
+        _add( iDays, iMillis, iNanos, this );
+        return this;
+      }
+
+      public final AbsoluteTime add( HighResolutionTime time ) {
+        _add( time.getDays(), time.getMilliseconds(), time.getNanoseconds(), this );
+        return this;
+      }
+
+      public RelativeTime subtract( AbsoluteTime atime, RelativeTime destination ) {
+        if ( destination != null ){ 
+          destination.set( this );
+          destination.subtract(atime.getDays(), atime.getMilliseconds(), atime.getNanoseconds());
+        }
+        return destination;
+      }
+
+      public final AbsoluteTime subtract( HighResolutionTime rtime ) {
+        _subtract( rtime.getDays(), rtime.getMilliseconds(), rtime.getNanoseconds(), this );
+        if (m_iDays &lt; 0)
+          set(0,0,0);
+        return this;
+      }
+
+      public AbsoluteTime subtract( int iDays, int iMillis, int iNanos ) {
+        _subtract( iDays, iMillis, iNanos, this );
+        if (m_iDays &lt; 0)
+          set(0,0,0);
+        return this;
+      }
+    }
+  </Fragment>
+</File>

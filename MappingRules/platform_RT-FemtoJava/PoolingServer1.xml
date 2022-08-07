@@ -1,0 +1,97 @@
+<File Name="PoolingServer1.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimingAttributes, PeriodicTiming">
+  <Fragment>
+package saito.sashimi.realtime;
+
+import saito.sashimi.FemtoJavaIO;
+import saito.sashimi.FemtoJavaInterruptSystem;
+import saito.sashimi.FemtoJavaTimer;
+public class PoolingServer1 extends AbstractPoolingServer {
+	
+	private static AbsoluteTime m_poolserverResumeTime = new AbsoluteTime(0,5,0);
+	private static AbsoluteTime m_poolserverActiveTime = new AbsoluteTime(0,0,0);
+	private static RelativeTime m_poolserverPrevProcTime = new RelativeTime(0,0,0);
+	protected static RelativeTime m_budgetTime = new RelativeTime(0,0,0);
+
+	public PoolingServer1() {
+		super();
+		m_ResumeTime = m_poolserverResumeTime;
+		m_ActiveTime = m_poolserverActiveTime;
+		m_PreviousProcessTime = m_poolserverPrevProcTime;	
+	}
+	public PoolingServer1(SchedulingParameters schedulingParameters) {
+		super(schedulingParameters);
+		m_ResumeTime = m_poolserverResumeTime;
+		m_ActiveTime = m_poolserverActiveTime;
+		m_PreviousProcessTime = m_poolserverPrevProcTime;
+	}
+	public PoolingServer1(SchedulingParameters schedulingParameters,
+			ReleaseParameters releaseParameters) {
+		super(schedulingParameters, releaseParameters);
+		m_ResumeTime = m_poolserverResumeTime;
+		m_ActiveTime = m_poolserverActiveTime;
+		m_PreviousProcessTime = m_poolserverPrevProcTime;
+	}
+	public void mainTask() {
+		while (true) {
+			Scheduler sched = Scheduler.c_defaultScheduler;
+			boolean hasAperiodicTask = true;
+			while (hasAperiodicTask) {
+				hasAperiodicTask = true;
+				RealtimeThread nextTask = null;
+				RealtimeThread auxTask = null;
+				// look for next ready aperiodic task
+				int i = 0;
+				for(; (nextTask == null) &amp;&amp; (i &lt; sched.m_AperiodicListCount); i++) {
+					auxTask = sched.m_AperiodicTaskList[i];
+					if (auxTask.isStarted() &amp;&amp; !auxTask.isBlocked() &amp;&amp; !auxTask.isFinished()
+						&amp;&amp; (auxTask.getResumeTime().compareTo(Clock.getTime()) &lt;= 0))
+						nextTask = auxTask;
+				}
+				// if an aperiodic task is ready, it will be executed
+				if (nextTask != null) {
+					nextTask.mainTask();
+					nextTask.internalFinish();
+				}
+				else
+					hasAperiodicTask = false;
+			}
+			// replenish budget for poolserver
+			m_budgetTime.set(getReleaseParameters().getCost());
+			waitForNextPeriod();
+		}
+	}
+	
+	public void addAperiodicTaskToExecute(RealtimeThread task)
+	{
+		int x = 0;
+		x++;
+	}
+	
+	public void setupPoolServerBubgetTimer()
+	{
+        // set and active budget timer
+		FemtoJavaInterruptSystem.setEnable(0x2A);
+		FemtoJavaTimer.setTimer1(m_budgetTime.convertToFJTimeoutValue());
+		FemtoJavaTimer.startTimer1();
+	}
+	
+	protected void calculeRemainingBudget()
+	{
+		AbsoluteTime tmp = Clock.getTime();
+		tmp.subtract(m_ActiveTime.getDays(), m_ActiveTime.getMilliseconds(), m_ActiveTime.getNanoseconds());
+        m_budgetTime.subtract(tmp.getDays(), tmp.getMilliseconds(), tmp.getNanoseconds());
+	}
+	
+	protected void replanishBudget()
+	{
+		m_budgetTime.set(getReleaseParameters().getCost());
+	}
+	public void exceptionTask() {
+	}
+	protected void initializeStack() {
+	}
+
+}
+  </Fragment>
+</File>

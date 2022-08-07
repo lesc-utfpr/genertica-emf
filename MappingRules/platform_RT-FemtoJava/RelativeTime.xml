@@ -1,0 +1,59 @@
+<File Name="RelativeTime.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="SchedulingSupport, TimingAttributes, PeriodicTiming, TimeBoundedActivity, 
+               Jitter, DataFreshness, TolaratedDelay, ClockDrift">
+  <Fragment>
+	package saito.sashimi.realtime;
+	
+	public class RelativeTime extends HighResolutionTime {
+	  
+	  public RelativeTime() {
+		set( 0, 0, 0 );
+	  }
+	  
+	  public RelativeTime( int iDays, int iMillis, int iNanos ) {
+		set( iDays, iMillis, iNanos );
+	  }
+	  
+	  public RelativeTime( RelativeTime time ) {
+		set( time );
+	  }
+	  
+	  public RelativeTime add( int iDays, int iMillis, int iNanos ) {
+		_add( iDays, iMillis, iNanos, this );
+		return this;
+	  }
+	  
+	  public final RelativeTime add( RelativeTime time ) {
+		_add( time.getDays(), time.getMilliseconds(), time.getNanoseconds(), this );
+		return this;
+	  }
+	  
+	  public void addInterarrivalTo( AbsoluteTime atime ) {
+		atime.add( this );
+	  }
+	  
+	  public final RelativeTime subtract( RelativeTime rtime ) {
+		_subtract(rtime.getDays(), rtime.getMilliseconds(), rtime.getNanoseconds(), this);
+		return this;
+	  }
+	  
+	  public RelativeTime subtract( RelativeTime rtime, RelativeTime destination ) {
+		if ( destination != null ) {
+		  destination.set( this );
+		  //destination.add( -rtime.getDays(), -rtime.getMilliseconds(), -rtime.getNanoseconds() );
+		  destination.subtract( rtime );
+		}
+		return destination;
+	  }
+	  
+	  public RelativeTime subtract( int iDays, int iMillis, int iNanos ) {
+		_subtract( iDays, iMillis, iNanos, this );
+		return this;
+	  }
+	  
+	  public String toString() {
+		return " " + getDays() + " dias " + getMilliseconds() + " ms " + getNanoseconds() + " ns";
+	  }
+	}
+  </Fragment>
+</File>

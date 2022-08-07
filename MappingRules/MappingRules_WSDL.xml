@@ -1,0 +1,832 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Platforms>
+  <!--**********************************************************************-->
+  <!--*          Configuration for RT-FemtoJava Platform                   *-->
+  <!--**********************************************************************-->
+  <WSDL>
+    <!-- Mapping rules for APPLICATION CODE -->
+    <Application>
+      <Software>
+        <!-- Source code generation options -->
+        <SourceOptions isAspectLanguage="no" ClassesPerFile="1" 
+                       hasClassesDeclaration="no" Identation="5"
+                       BlockStart="&lt;" BlockEnd="&gt;">
+          <FileNameConvention>$Class.Name</FileNameConvention>
+          <Package>package $Class.Package;</Package>
+          <SourceReference>import $ReferencedClass.Package\.$ReferencedClass.Name;</SourceReference>
+          <SourceOrganization>
+            <DeclarationFile FileExtension="">
+            <!-- 
+             Although WSDL is only a definition language, GenERTiCA forces the engineers
+             to define the "implementation" part of the target language.
+             Thus, for WSDL, we defined its mapping rules to generate the .wsdl files as 
+             "implementation files".
+             -->
+            </DeclarationFile>
+            
+            <ImplementationFile FileExtension=".wsdl">
+               &lt;?xml version="1.0" encoding="UTF-8"?>
+               \n
+               $SourceCode.ClassesDeclaration
+            </ImplementationFile>
+          </SourceOrganization>
+        </SourceOptions>
+        
+        
+        <!-- Mapping rules for PRIMARY ELEMENTS -->
+        <PrimaryElementsMapping>
+          <DataTypes>
+            <Array>
+            </Array>
+            <Boolean>boolean</Boolean>
+            <Byte>byte</Byte>
+            <Char>char</Char>
+            <Class>$DataType.Represent.Name</Class>
+            <DateTime>Date</DateTime>
+            <EnumerationDefinition>
+                  \n&lt;xs:simpleType name="$DataType.Name">
+                  \n     &lt;xs:restriction base="xs:token">
+                     #foreach ($v in $DataType.Values)  
+                  \n
+                  \n          &lt;xs:enumeration value="$v" />
+                     #end
+                  \n
+                  \n     &lt;/xs:restriction>
+                  \n&lt;/xs:simpleType>
+            </EnumerationDefinition>
+            <Enumeration>
+              ${DataType.Name}
+            </Enumeration>
+            <Integer>int</Integer>
+            <Long>long</Long>
+            <Short>short</Short>
+            <String>String</String>
+            <Void>void</Void>
+            <Double>double</Double>
+            <Float>float</Float>
+          </DataTypes>
+          <DataTypeDefaultValues>
+            <Array>null</Array>
+            <Boolean>true</Boolean>
+            <Byte>0</Byte>
+            <Char>''</Char>
+            <Class>null</Class>
+            <DateTime>new Date(2000, 01, 01, 0, 0, 0)</DateTime>
+            <Enumeration></Enumeration>
+            <Integer>0</Integer>
+            <Long>0</Long>
+            <Short>0</Short>
+            <String>""</String>
+            <Void></Void>
+            <Double>0.0</Double>
+            <Float>0.0</Float>
+          </DataTypeDefaultValues>
+          <Visibilities>
+            <Private>private</Private>
+            <Protected>protected</Protected>
+            <Public>public</Public>
+          </Visibilities>
+          <ParameterKinds>
+            <In></In>
+            <Out></Out>
+            <InOut></InOut>
+          </ParameterKinds>
+        </PrimaryElementsMapping>
+        
+        
+        <!-- Mapping rules for CLASSES -->
+        <Classes>
+          <Declaration>
+               \n&lt;wsdl:definitions
+                  \n$CodeGenerator.getIdentationSpace(1) 
+                  targetNamespace="http://www.smartfactory.de/$Class.Name"
+                  \n$CodeGenerator.getIdentationSpace(1) 
+	          xmlns:tns="http://www.smartfactory.de/$Class.Name"
+                  \n$CodeGenerator.getIdentationSpace(1) 
+                  xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                  #if ( $Class.hasEvents() )
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(1) 
+                     xmlns:wse="http://schemas.xmlsoap.org/ws/2004/08/eventing"
+                  #end
+                  \n
+                  \n$CodeGenerator.getIdentationSpace(1) 
+                  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap12/">
+               
+               \n 
+               \n&lt;!-- *****************************************************
+               \n                 Types
+               \n     *****************************************************	-->
+               \n$CodeGenerator.getIdentationSpace(1) 
+               &lt;wsdl:types>
+                  \n$CodeGenerator.getIdentationSpace(2) 
+                  &lt;xs:schema
+                     \n$CodeGenerator.getIdentationSpace(3)
+                     targetNamespace="http://www.smartfactory.de/$Class.Name"
+                     \n$CodeGenerator.getIdentationSpace(3)
+                     xmlns:tns="http://www.smartfactory.de/$Class.Name"
+                     #if ( $Class.hasEvents() )
+                        \n
+                        \n$CodeGenerator.getIdentationSpace(3) 
+                        elementFormDefault="qualified" blockDefault="#all"
+                     #end
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(3)
+                     xmlns:xs="http://www.w3.org/2001/XMLSchema">
+                 
+               \n    
+               #set( $enums = $DERCSHelper.getListOfEnumerationsUsedInClass($Class) )
+               #foreach ( $e in $enums ) 
+                  \n $CodeGenerator.getEnumerationDeclaration($e, 3)
+               #end
+               \n
+               \n
+               
+               #set( $mthList = $Class.Methods )
+               #set( $tmp = "" )
+               #foreach ( $mth in $mthList ) 
+                  #if ( !$DERCSHelper.isConstructor($mth) 
+                        &amp;&amp; !$DERCSHelper.isDestructor($mth) 
+                        &amp;&amp; !$mth.isTagged("event") )
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(3) 
+                     &lt;xs:element name="$mth.Name"
+                        #if ($mth.InputParametersCount > 0) 
+                           >
+                           #foreach( $param in $mth.Parameters )
+                              #if ( $param.isInputParameter() )
+                                 #if ( $param.DataType.isPrimitive() )
+                                    #set( $tmp = "xs" )
+                                 #else
+                                    #set( $tmp = "tns" )
+                                 #end
+                                 \n
+                                 \n$CodeGenerator.getIdentationSpace(4) 
+                                 &lt;xs:complexType>
+                                   \n$CodeGenerator.getIdentationSpace(5) 
+                                   &lt;xs:sequence>
+                                      \n$CodeGenerator.getIdentationSpace(6) 
+                                      &lt;xs:element name="$param.Name" type="${tmp}:$CodeGenerator.getDataTypeStr($param.DataType)" />
+                                   \n$CodeGenerator.getIdentationSpace(5) 
+                                   &lt;/xs:sequence>
+                                 \n$CodeGenerator.getIdentationSpace(4) 
+                                 &lt;/xs:complexType>               
+                              #end
+                           #end  
+                        #else
+                           type="xs:string" >
+                        #end
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(3) 
+                     &lt;/xs:element>                  
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(3) 
+                     &lt;xs:element name="${mth.Name}Response" 
+                        #if ($mth.OutputParametersCount > 0) 
+                           >
+                           #foreach( $param in $mth.Parameters )
+                              #if ( $param.isOutputParameter() )
+                                 #if ( $param.DataType.isPrimitive() )
+                                    #set( $tmp = "xs" )
+                                 #else
+                                    #set( $tmp = "tns" )
+                                 #end
+                                 \n
+                                 \n$CodeGenerator.getIdentationSpace(4) 
+                                 &lt;xs:complexType>
+                                   \n$CodeGenerator.getIdentationSpace(5) 
+                                   &lt;xs:sequence>
+                                      \n$CodeGenerator.getIdentationSpace(6) 
+                                      &lt;xs:element name="$param.Name" type="${tmp}:$CodeGenerator.getDataTypeStr($param.DataType)" />
+                                   \n$CodeGenerator.getIdentationSpace(5) 
+                                   &lt;/xs:sequence>
+                                 \n$CodeGenerator.getIdentationSpace(4) 
+                                 &lt;/xs:complexType>               
+                              #end
+                           #end  
+                        #else
+                           type="xs:string" >
+                        #end
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(3) 
+                     &lt;/xs:element> 
+                     \n
+                  #elseif ( $mth.isTagged("event") )
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(3) 
+                     &lt;!-- 	******* Event ********    -->
+                     \n$CodeGenerator.getIdentationSpace(3) 
+                     &lt;xs:element name="${mth.Name}Event" 
+                        #if ($mth.OutputParametersCount > 0) 
+                           >
+                           #foreach( $param in $mth.Parameters )
+                              #if ( $param.isOutputParameter() )
+                                 #if ( $param.DataType.isPrimitive() )
+                                    #set( $tmp = "xs" )
+                                 #else
+                                    #set( $tmp = "tns" )
+                                 #end
+                                 \n
+                                 \n$CodeGenerator.getIdentationSpace(4) 
+                                 &lt;xs:complexType>
+                                   \n$CodeGenerator.getIdentationSpace(5) 
+                                   &lt;xs:sequence>
+                                      \n$CodeGenerator.getIdentationSpace(6) 
+                                      &lt;xs:element name="$param.Name" type="${tmp}:$CodeGenerator.getDataTypeStr($param.DataType)" minOccurs="1" maxOccurs="1" />
+                                   \n$CodeGenerator.getIdentationSpace(5) 
+                                   &lt;/xs:sequence>
+                                 \n$CodeGenerator.getIdentationSpace(4) 
+                                 &lt;/xs:complexType>               
+                              #end
+                           #end  
+                        #else
+                           type="xs:string" >
+                        #end
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(3) 
+                     &lt;/xs:element>
+                  #end
+                  \n
+               #end        
+               \n
+               \n
+                              
+               \n$CodeGenerator.getIdentationSpace(2) 
+               &lt;/xs:schema>
+               \n$CodeGenerator.getIdentationSpace(1) 
+               &lt;/wsdl:types>
+               
+               \n		
+               \n&lt;!-- *****************************************************
+               \n                 Messages
+               \n     *****************************************************	-->
+               
+               #foreach ( $mth in $mthList ) 
+                  #if ( !$DERCSHelper.isConstructor($mth) 
+                        &amp;&amp; !$DERCSHelper.isDestructor($mth) 
+                        &amp;&amp; !$mth.isTagged("event") )
+                     \n
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(1) 
+                     &lt;wsdl:message name="${mth.Name}RequestMessage">
+                        \n$CodeGenerator.getIdentationSpace(2)
+                        &lt;wsdl:part name="parameters" element="tns:${mth.Name}" />
+                     \n$CodeGenerator.getIdentationSpace(1)
+                     &lt;/wsdl:message>
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(1)
+                     &lt;wsdl:message name="${mth.Name}ResponseMessage">
+                        \n$CodeGenerator.getIdentationSpace(2)
+                        &lt;wsdl:part name="parameters" element="tns:${mth.Name}Response" />
+                     \n$CodeGenerator.getIdentationSpace(1)
+                     &lt;/wsdl:message>
+                  #elseif ( $mth.isTagged("event") )
+                     \n
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(1)
+                     &lt;wsdl:message name="${mth.Name}EventMessage">
+                        \n$CodeGenerator.getIdentationSpace(2)
+                        &lt;wsdl:part name="parameters" element="tns:${mth.Name}Event" />
+                     \n$CodeGenerator.getIdentationSpace(1)
+                     &lt;/wsdl:message>
+                  #end
+               #end
+               \n
+               \n
+               
+               \n
+               \n&lt;!-- *****************************************************
+               \n                 PortTypes
+               \n     *****************************************************	-->
+               
+               \n$CodeGenerator.getIdentationSpace(1) 
+               &lt;wsdl:portType name="$Class.Name" 
+               #if ( $Class.hasEvents() )
+                     wse:EventSource="true"
+               #end
+               \n
+               >
+               
+               #foreach ( $mth in $mthList ) 
+                  #if ( !$DERCSHelper.isConstructor($mth) 
+                        &amp;&amp; !$DERCSHelper.isDestructor($mth) 
+                        &amp;&amp; !$mth.isTagged("event") )
+                     \n
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(2)
+                     &lt;wsdl:operation name="${mth.Name}">
+                        \n$CodeGenerator.getIdentationSpace(3)
+                        &lt;wsdl:input message="tns:${mth.Name}RequestMessage" />
+                        \n$CodeGenerator.getIdentationSpace(3)
+                        &lt;wsdl:output message="tns:${mth.Name}ResponseMessage" />
+                     \n$CodeGenerator.getIdentationSpace(2)
+                     &lt;/wsdl:operation>           
+                  #elseif ( $mth.isTagged("event") )   
+                     \n
+                     \n
+                     \n$CodeGenerator.getIdentationSpace(2)
+                     &lt;wsdl:operation name="${mth.Name}">
+                        \n$CodeGenerator.getIdentationSpace(3)
+                        &lt;wsdl:output message="tns:${mth.Name}EventMessage" />
+                     \n$CodeGenerator.getIdentationSpace(2)
+                     &lt;/wsdl:operation>          
+                  #end
+               #end
+               \n
+               \n
+               \n$CodeGenerator.getIdentationSpace(1) 
+               &lt;/wsdl:portType>
+               
+               
+               
+               
+               \n
+               \n
+               \n
+               \n&lt;!-- *****************************************************
+               \n                 Bindings
+               \n     *****************************************************	-->               
+	       \n$CodeGenerator.getIdentationSpace(1)
+	       &lt;wsdl:binding name="${Class.Name}-soap" type="tns:${Class.Name}">
+	       
+               \n$CodeGenerator.getIdentationSpace(2)
+               &lt;soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http" />
+
+               #foreach ( $mth in $mthList ) 
+                  #if ( !$DERCSHelper.isConstructor($mth) 
+                        &amp;&amp; !$DERCSHelper.isDestructor($mth) 
+                        &amp;&amp; !$mth.isTagged("event") )
+                     \n
+                     \n               
+                     \n$CodeGenerator.getIdentationSpace(3)
+                     &lt;wsdl:operation name="${mth.Name}">
+                        \n$CodeGenerator.getIdentationSpace(4)
+                        &lt;soap:operation />
+                        \n$CodeGenerator.getIdentationSpace(4)
+                        &lt;wsdl:input>
+                           \n$CodeGenerator.getIdentationSpace(5)
+                           &lt;soap:body use="literal" />
+                        \n$CodeGenerator.getIdentationSpace(4)
+                        &lt;/wsdl:input>
+                        \n$CodeGenerator.getIdentationSpace(4)
+                        &lt;wsdl:output>
+                           \n$CodeGenerator.getIdentationSpace(5)
+                           &lt;soap:body use="literal" />
+                        \n$CodeGenerator.getIdentationSpace(4)
+                        &lt;/wsdl:output>
+                     \n$CodeGenerator.getIdentationSpace(3)
+                     &lt;/wsdl:operation>
+                  #elseif ( $mth.isTagged("event") )
+                     \n
+                     \n               
+                     \n$CodeGenerator.getIdentationSpace(3)
+                     &lt;wsdl:operation name="${mth.Name}">
+                        \n$CodeGenerator.getIdentationSpace(4)
+                        &lt;soap:operation />
+                        \n$CodeGenerator.getIdentationSpace(4)
+                        &lt;wsdl:output>
+                           \n$CodeGenerator.getIdentationSpace(5)
+                           &lt;soap:body use="literal" />
+                        \n$CodeGenerator.getIdentationSpace(4)
+                        &lt;/wsdl:output>
+                     \n$CodeGenerator.getIdentationSpace(3)
+                     &lt;/wsdl:operation>
+                  #end
+               #end
+               \n
+               \n
+               \n$CodeGenerator.getIdentationSpace(1) 
+               &lt;/wsdl:binding>
+               
+               
+               \n
+               \n
+               \n
+               \n&lt;!-- *****************************************************
+               \n                 Services
+               \n     *****************************************************	-->
+               \n$CodeGenerator.getIdentationSpace(1) 
+               &lt;wsdl:service name="${Class.Name}">
+                  \n$CodeGenerator.getIdentationSpace(2) 
+                  &lt;wsdl:port name="${Class.Name}-port" binding="tns:${Class.Name}-soap">
+                     \n$CodeGenerator.getIdentationSpace(3) 
+                     &lt;soap:address location="" />
+                  \n$CodeGenerator.getIdentationSpace(2) 
+                  &lt;/wsdl:port>
+               \n$CodeGenerator.getIdentationSpace(1) 
+               &lt;/wsdl:service>
+
+               \n
+               \n&lt;/wsdl:definitions>
+
+          </Declaration>
+          
+          <Implementation>
+          </Implementation>
+          
+          <Attributes>
+          </Attributes>
+          
+          <Messages>
+            <Declaration></Declaration>
+            <Implementation> </Implementation>
+          </Messages>
+        </Classes>
+        
+        
+        <!-- Mapping rules for BEHAVIOR, i.e. sequence of actions -->
+        <Behavior>
+          <VariableDeclaration>
+          </VariableDeclaration>
+          
+          <Branch>
+          </Branch>
+          
+          <Loop> 
+          </Loop>
+          
+          <Assignment>
+          </Assignment>
+          
+          <Object>
+            <Creation> </Creation>
+            
+            <Destruction> </Destruction>
+          </Object>
+          
+          <Expression>
+          </Expression>
+          
+          <Return>
+          </Return>
+          
+          <StateChange></StateChange>
+          
+          <SendMessage>
+            <ToLocal>
+              <Software> </Software>
+              <Hardware> </Hardware>
+            </ToLocal>
+            
+            <ToRemote>
+              <Software> </Software>
+              <Hardware> </Hardware>
+            </ToRemote>
+          </SendMessage>
+          
+          <InsertArrayElement>
+          </InsertArrayElement>
+          
+          <RemoveArrayElement>
+          </RemoveArrayElement>
+          
+          <GetArrayElement>
+          </GetArrayElement>
+          
+          <SetArrayElement>
+          </SetArrayElement>
+          
+          <ArrayLength>            
+          </ArrayLength>
+        </Behavior>
+        
+        
+        <!-- Mapping rules for INTERRUPT HANDLING code -->
+        <InterruptHandling>
+        </InterruptHandling>
+        
+        
+        <!-- Mapping rules for DERAF ASPECTS -->
+        <Aspects>
+          <!--**************************************************************-->
+          <!--*                Timing Package                              *-->
+          <!--**************************************************************-->
+          <TimingAttributes>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Deadline" Order="3" ModelLevel="no">
+                // TimingAttributes.Deadline
+              </Structural>
+              <Structural Name="Priority" Order="3">
+                // TimingAttributes.Priority
+              </Structural>
+              <Structural Name="WCET" Order="3" ModelLevel="no">
+                // TimingAttributes.WCET
+              </Structural>
+              <Structural Name="ModityClassStructure" Order="0" ModelLevel="yes">
+                // TimingAttributes.ModityClassStructure
+              </Structural>
+              <Structural Name="ModifyConstructor" Order="0" ModelLevel="yes">
+                // TimingAttributes.ModifyConstructor
+              </Structural>
+              <Behavioral Name="SetTimingAttributes" Order="2" ModelLevel="no">
+                // TimingAttributes.SetTimingAttributes
+              </Behavioral>
+              <Behavioral Name="AdaptObjectConstruction" Order="0" ModelLevel="yes">
+                // TimingAttributes.AdaptObjectConstruction
+              </Behavioral>
+              <Structural Name="AddAccessMethods" Order="3" ModelLevel="no">
+                // TimingAttributes.AddAccessMethods
+              </Structural>
+              <Structural Name="StartTime" Order="3" ModelLevel="no">
+                // TimingAttributes.StartTime
+              </Structural>
+              <Structural Name="EndTime" Order="3" ModelLevel="no">
+                // TimingAttributes.EndTime
+              </Structural>
+            </Adaptations>
+          </TimingAttributes>
+          
+          <PeriodicTiming>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Period" Order="1" ModelLevel="no">
+                // PeriodicTiming.Period
+              </Structural>
+              <Structural Name="ModifyConstructor" Order="1" ModelLevel="yes">
+                // PeriodicTiming.ModifyConstructor
+              </Structural>
+              <Behavioral Name="SetPeriod" Order="2" ModelLevel="no">
+                // PeriodicTiming.SetPeriod
+              </Behavioral>
+              <Behavioral Name="FrequencyControl" Order="3" ModelLevel="no">
+                // PeriodicTiming.FrequencyControl
+              </Behavioral>
+              <Behavioral Name="LoopMechanism" Order="4" ModelLevel="no">
+                // PeriodicTiming.LoopMechanism
+              </Behavioral>
+              <Behavioral Name="AdaptObjectConstruction" Order="1" ModelLevel="yes">
+                // PeriodicTiming.AdaptObjectConstruction
+              </Behavioral>
+            </Adaptations>
+          </PeriodicTiming>
+
+          <SchedulingSupport>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Scheduler" Order="0" ModelLevel="no">
+                // SchedulingSupport.Scheduler
+              </Structural>
+              <Behavioral Name="SetupConcurrentActivities" Order="0" ModelLevel="no">
+                // SchedulingSupport.SetupConcurrentActivities
+              </Behavioral>
+            </Adaptations>
+          </SchedulingSupport>
+          
+          <TimeBoundedActivity>
+            <Adaptations>
+              <Structural Name="TimeCountInfrastructure" Order="0" ModelLevel="no">
+                // TimeBoundedActivity.TimeCountInfrastructure
+              </Structural>
+              <Behavioral Name="StartCounting" Order="0" ModelLevel="no">
+                // TimeBoundedActivity.StartCounting
+              </Behavioral>
+              <Behavioral Name="StopCounting" Order="0" ModelLevel="no">
+                // TimeBoundedActivity.StopCounting
+              </Behavioral>
+            </Adaptations>
+          </TimeBoundedActivity>
+          
+          <!--**************************************************************-->
+          <!--*                Precision Package                           *-->
+          <!--**************************************************************-->
+          <Jitter>
+            <Adaptations>
+              <Behavioral Name="StartTime" Order="0" ModelLevel="no">
+                // Jitter.StartTime
+              </Behavioral>
+              <Behavioral Name="VerifyToleratedJitter" Order="0" ModelLevel="no">
+                // Jitter.VerifyToleratedJitter
+              </Behavioral>
+            </Adaptations>
+          </Jitter>
+          
+          <ToleratedDelay>
+            <Adaptations>
+              <Behavioral Name="StartTime" Order="0" ModelLevel="no">
+                // ToleratedDelay.StartTime
+              </Behavioral>
+              <Behavioral Name="VerifyToleratedDelay" Order="0" ModelLevel="no">
+                // ToleratedDelay.VerifyToleratedDelay
+              </Behavioral>
+            </Adaptations>
+          </ToleratedDelay>
+          
+          <ClockDrift>
+            <Adaptations>
+              <Behavioral Name="CheckClockDrift" Order="0" ModelLevel="no">
+                // ClockDrift.CheckClockDrift
+              </Behavioral>
+            </Adaptations>
+          </ClockDrift>
+          
+          <DataFreshness>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="ValidityInformation" Order="0" ModelLevel="no">
+                // DataFreshness.ValidityInformation
+              </Structural>
+              <Structural Name="SetValidity" Order="0" ModelLevel="no">
+                // DataFreshness.SetValidity
+              </Structural>
+              <Behavioral Name="VerifyFreshness" Order="0" ModelLevel="no">
+                 // DataFreshness.VerifyFreshness
+              </Behavioral>
+              <Behavioral Name="UpdateFreshness" Order="0" ModelLevel="no">
+                 // DataFreshness.UpdateFreshness
+              </Behavioral>
+            </Adaptations>
+          </DataFreshness>
+          
+          <!--**************************************************************-->
+          <!--*                Synchronization Package                     *-->
+          <!--**************************************************************-->
+          <ConcurrentAccessControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="ConcurrencyControlMechanism" Order="0" ModelLevel="no">
+                // ConcurrentAccessControl.ConcurrencyControlMechanism
+              </Structural>
+              <Behavioral Name="AcquireAccess" Order="0" ModelLevel="no">
+                // ConcurrentAccessControl.AquireAccess
+              </Behavioral>
+              <Behavioral Name="ReleaseAccess" Order="0" ModelLevel="no">
+                // ConcurrentAccessControl.ReleaseAccess
+              </Behavioral>
+            </Adaptations>
+          </ConcurrentAccessControl>
+          
+          <MessageSynchronization>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="WaitingMechanism" Order="0" ModelLevel="no">
+                // MessageSynchronization.WaitingMechanism
+              </Structural>
+              <Behavioral Name="WaitForAcknowledge" Order="0" ModelLevel="no">
+                // MessageSynchronization.WaitForAcknowledge
+              </Behavioral>
+            </Adaptations>
+          </MessageSynchronization>
+          
+          <!--**************************************************************-->
+          <!--*                Communication Package                       *-->
+          <!--**************************************************************-->
+          <MessageAck>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="AcknowledgmentMechanism" Order="0" ModelLevel="no">
+                // MessageAck.AcknowledgeMechanism
+              </Structural>
+              <Behavioral Name="SignalAcknowledgmentMechanism" Order="0" ModelLevel="no">
+                // MessageAck.SignalAcknowledgeMechanism
+              </Behavioral>
+              <Behavioral Name="SendAcknowledgment" Order="0" ModelLevel="no">
+                // MessageAck.SendAcknowledge
+              </Behavioral>
+            </Adaptations>
+          </MessageAck>
+          
+          <MessageIntegrity>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Behavioral Name="GenerateIntegrityInfo" Order="0" ModelLevel="no">
+                // MessageIntegrity.GenerateIntegrityInfo
+              </Behavioral>
+              <Behavioral Name="VerifyIntegrityInfo" Order="0" ModelLevel="no">
+                // MessageIntegrity.VerifyIntegrityInfo
+              </Behavioral>
+            </Adaptations>
+          </MessageIntegrity>
+          
+          <MessageCompression>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Behavioral Name="Compress" Order="0" ModelLevel="no">
+                // MessageCompression.Compress
+              </Behavioral>
+              <Behavioral Name="Decompress" Order="0" ModelLevel="no">
+                // MessageCompression.Decompress
+              </Behavioral>
+            </Adaptations>
+          </MessageCompression>
+          
+          <!--**************************************************************-->
+          <!--*                TaskAllocation Package                      *-->
+          <!--**************************************************************-->
+          <NodeStatusRetrieval>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Alive" Order="0" ModelLevel="no">
+                // NodeStatusRetrieval.Alive
+              </Structural>
+              <Behavioral Name="ProcessingLoad" Order="0" ModelLevel="no">
+                // NodeStatusRetrieval.ProcessingLoad
+              </Behavioral>
+              <Behavioral Name="MessageThroughput" Order="0" ModelLevel="no">
+                // NodeStatusRetrieval.MessageThroughput
+              </Behavioral>
+            </Adaptations>
+          </NodeStatusRetrieval>
+          
+          <TaskMigration>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Behavioral Name="Migrate" Order="0" ModelLevel="no">
+                // TaskMigration.Migrate
+              </Behavioral>
+              <Structural Name="MigrationMechanism" Order="0" ModelLevel="no">
+                // TaskMigration.MigrationMechanism
+              </Structural>
+            </Adaptations>
+          </TaskMigration>
+          
+          <!--**************************************************************-->
+          <!--*                    Embedded Package                        *-->
+          <!--**************************************************************-->
+          <HwAreaMonitoring>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="HwAreMonitoringMechanism" Order="0" ModelLevel="no">
+                // HwAreaMonitoring.HwAreMonitoringMechanism
+              </Structural>
+              <Behavioral Name="IncreaseAreaUsage" Order="0" ModelLevel="no">
+                // HwAreaMonitoring.IncreaseAreaUsage
+              </Behavioral>
+              <Behavioral Name="DecreaseAreaUsage" Order="0" ModelLevel="no">
+                // HwAreaMonitoring.DecreaseAreaUsage
+              </Behavioral>
+            </Adaptations>
+          </HwAreaMonitoring>
+          
+          <HwAreaControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="HwAreaControlPolicy" Order="0" ModelLevel="no">
+                // HwAreaControl.InsertControlMechanism
+              </Structural>
+            </Adaptations>
+          </HwAreaControl>
+          
+          <EnergyMonitoring>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="EnergyMonitoringMechanism" Order="0" ModelLevel="no">
+                // EnergyMonitoring.EnergyMonitoringMechanism
+              </Structural>
+              <Behavioral Name="StartingEnergyAmount" Order="0" ModelLevel="no">
+                // EnergyMonitoring.StartingEnergyAmount
+              </Behavioral>
+              <Behavioral Name="CalculateEnergyConsumption" Order="0" ModelLevel="no">
+                // EnergyMonitoring.CalculateEnergyConsumption
+              </Behavioral>
+            </Adaptations>
+          </EnergyMonitoring>
+          
+          <EnergyControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="EnergyConsumptionPolicy" Order="0" ModelLevel="no">
+                // EnergyControl.EnergyConsumptionPolicy
+              </Structural>
+            </Adaptations>
+          </EnergyControl>
+          
+          <MemoryUsageMonitoring>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="MemoryMonitoringMechanism" Order="0" ModelLevel="no">
+                // MemoryUsageMonitoring.MemoryMonitoringMechanism
+              </Structural>
+              <Behavioral Name="IncreaseMemoryUsage" Order="0" ModelLevel="no">
+                // MemoryUsageMonitoring.IncreaseMemoryUsage
+              </Behavioral>
+              <Behavioral Name="DecreaseMemoryUsage" Order="0" ModelLevel="no">
+                // MemoryUsageMonitoring.DecreaseMemoryUsage
+              </Behavioral>
+            </Adaptations>
+          </MemoryUsageMonitoring>
+          
+          <MemoryControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="MemoryUsageControlPolicy" Order="0" ModelLevel="no">
+                // MemoryControl.MemoryUsageControlPolicy
+              </Structural>
+            </Adaptations>
+          </MemoryControl>
+        </Aspects>
+      </Software>
+      
+      <Hardware></Hardware>
+    </Application>
+    
+    
+    <!-- Mapping rules for PLATFORM CODE -->
+    <PlatformConfiguration>
+      <Software></Software>
+      <Hardware></Hardware>
+    </PlatformConfiguration>
+  </WSDL>
+  
+
+</Platforms>

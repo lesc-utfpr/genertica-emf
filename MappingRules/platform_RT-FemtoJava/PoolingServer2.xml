@@ -1,0 +1,95 @@
+<File Name="PoolingServer2.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimingAttributes, PeriodicTiming">
+  <Fragment>
+package saito.sashimi.realtime;
+
+import saito.sashimi.FemtoJavaInterruptSystem;
+import saito.sashimi.FemtoJavaTimer;
+
+public class PoolingServer2 extends AbstractPoolingServer {
+	
+	private static AbsoluteTime m_poolserverResumeTime = new AbsoluteTime(0,5,0);
+	private static AbsoluteTime m_poolserverActiveTime = new AbsoluteTime(0,0,0);
+	private static RelativeTime m_poolserverPrevProcTime = new RelativeTime(0,0,0);
+	protected static RelativeTime m_budgetTime = new RelativeTime(0,0,0);
+	
+	protected static int LIST_BOUND = 6;
+	protected static RealtimeThread m_TaskActivationList[] = {null, null, null, null, null, null};
+    protected int m_NextTask = 0;
+    protected int m_InserPos = 0;
+	public PoolingServer2() {
+		super();
+		m_ResumeTime = m_poolserverResumeTime;
+		m_ActiveTime = m_poolserverActiveTime;
+		m_PreviousProcessTime = m_poolserverPrevProcTime;	
+	}
+	public PoolingServer2(SchedulingParameters schedulingParameters) {
+		super(schedulingParameters);
+		m_ResumeTime = m_poolserverResumeTime;
+		m_ActiveTime = m_poolserverActiveTime;
+		m_PreviousProcessTime = m_poolserverPrevProcTime;
+	}
+	public PoolingServer2(SchedulingParameters schedulingParameters,
+			ReleaseParameters releaseParameters) {
+		super(schedulingParameters, releaseParameters);
+		m_ResumeTime = m_poolserverResumeTime;
+		m_ActiveTime = m_poolserverActiveTime;
+		m_PreviousProcessTime = m_poolserverPrevProcTime;
+	}
+	public void mainTask() {
+		while (true) {
+			Scheduler sched = Scheduler.c_defaultScheduler;
+			
+			while (m_NextTask != m_InserPos) {
+				RealtimeThread nextTask = m_TaskActivationList[m_NextTask];
+				if ((nextTask != null) 
+					&amp;&amp; (nextTask.isStarted() &amp;&amp; !nextTask.isBlocked() &amp;&amp; !nextTask.isFinished())) {
+					nextTask.mainTask();
+					nextTask.internalFinish();
+				}
+				m_TaskActivationList[m_NextTask] = null;
+				m_NextTask++;
+				if (m_NextTask >= LIST_BOUND)
+					m_NextTask = 0;
+			}
+			
+			// replenish budget for poolserver
+			m_budgetTime.set(getReleaseParameters().getCost());
+			waitForNextPeriod();
+		}
+	}
+	
+	public void addAperiodicTaskToExecute(RealtimeThread task)
+	{
+		m_TaskActivationList[m_InserPos] = task;
+		m_InserPos++;
+		if (m_InserPos >= LIST_BOUND)
+			m_InserPos = 0;
+	}
+	
+	public void setupPoolServerBubgetTimer()
+	{
+        // set and active budget timer
+		FemtoJavaInterruptSystem.setEnable(0x2A);
+		FemtoJavaTimer.setTimer1(m_budgetTime.convertToFJTimeoutValue());
+		FemtoJavaTimer.startTimer1();
+	}
+	
+	protected void calculeRemainingBudget()
+	{
+		AbsoluteTime tmp = Clock.getTime();
+		tmp.subtract(m_ActiveTime.getDays(), m_ActiveTime.getMilliseconds(), m_ActiveTime.getNanoseconds());
+        m_budgetTime.subtract(tmp.getDays(), tmp.getMilliseconds(), tmp.getNanoseconds());
+	}
+	
+	protected void replanishBudget()
+	{
+		m_budgetTime.set(getReleaseParameters().getCost());
+	}
+	public void exceptionTask() {
+	}
+	protected void initializeStack() {
+	}
+}
+  </Fragment>
+</File>

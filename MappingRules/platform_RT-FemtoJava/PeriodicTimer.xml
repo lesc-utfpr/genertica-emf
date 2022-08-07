@@ -1,0 +1,34 @@
+<File Name="PeriodicTimer.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimeBoundedActivity, Jitter, DataFreshness, TolaratedDelay, ClockDrift">
+  <Fragment>
+package saito.sashimi.realtime;
+
+import saito.sashimi.FemtoJavaTimer;
+public abstract class PeriodicTimer extends Timer {
+private AbsoluteTime m_atimeFireTime;
+public PeriodicTimer( HighResolutionTime hrtimeStart, RelativeTime hrtimeDelay, int id )
+{
+    super( hrtimeDelay, id );
+	m_atimeFireTime = (AbsoluteTime) hrtimeStart;
+}
+protected void executeTimer()
+{
+	if ((m_delay != null) &amp;&amp; m_isEnabled &amp;&amp; m_isRunning) 
+	{
+		disable();
+		stop();
+		enable();
+		FemtoJavaTimer.setTimer1(m_delay.convertToFJTimeoutValue());
+		FemtoJavaTimer.startTimer1();
+		m_isRunning = true;
+		this.runTimer();
+	}
+	else 
+	{
+		disable();
+		stop();
+	}
+}
+}
+  </Fragment>
+</File>

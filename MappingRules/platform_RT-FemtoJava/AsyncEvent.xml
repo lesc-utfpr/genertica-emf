@@ -1,0 +1,34 @@
+<File Name="AsyncEvent.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimingAttributes, PeriodicTiming">
+  <Fragment>
+package saito.sashimi.realtime;
+
+public abstract class AsyncEvent {
+	
+	public final static int MAX_ATTACHED_ASYNC_EVENT_HANDLERS = 3;
+		
+	protected AsyncEventHandler m_AttachedAsyncEventHandler = null;
+	
+	public void addHandler(AsyncEventHandler handler) {
+		m_AttachedAsyncEventHandler = handler;
+	}
+	public void fire() {
+		AsyncEventsMechanism.mechanism.fireAsyncEvent(this);
+	}
+	public boolean handledBy(AsyncEventHandler handler) {
+		return m_AttachedAsyncEventHandler != null;
+	}
+	
+	public void removeHandler(AsyncEventHandler handler) {
+		if (m_AttachedAsyncEventHandler != null) { 
+			m_AttachedAsyncEventHandler.deattachAsyncEvent();
+			m_AttachedAsyncEventHandler = null;
+		}
+	}
+	
+	public void setHandler(AsyncEventHandler handler) {
+		m_AttachedAsyncEventHandler = handler;
+	}
+}
+  </Fragment>
+</File>

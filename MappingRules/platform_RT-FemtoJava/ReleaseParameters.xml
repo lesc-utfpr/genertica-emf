@@ -1,0 +1,27 @@
+<File Name="ReleaseParameters.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="SchedulingSupport, TimingAttributes, PeriodicTiming">
+  <Fragment>
+    package saito.sashimi.realtime;
+    public abstract class ReleaseParameters {
+      private RelativeTime m_rtimeCost; 
+      private RelativeTime m_rtimeDeadline;
+      
+      public ReleaseParameters(RelativeTime rtimeCost, RelativeTime rtimeDeadline){
+        m_rtimeCost = rtimeCost;
+        m_rtimeDeadline = rtimeDeadline;
+      }
+      public RelativeTime getCost(){
+        return m_rtimeCost;
+      }
+      public RelativeTime getDeadline(){
+        return m_rtimeDeadline;
+      }
+      public void setCost( RelativeTime rtimeCost ){
+        m_rtimeCost = rtimeCost;
+      }
+      public void setDeadline( RelativeTime rtimeDeadline ){
+        m_rtimeDeadline = rtimeDeadline;
+      }
+    }
+  </Fragment>
+</File>

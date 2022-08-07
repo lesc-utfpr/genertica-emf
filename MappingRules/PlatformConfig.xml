@@ -1,0 +1,55 @@
+<PlatformConfiguration>
+   <Software>
+      <General OutputDirectory="~/tmp/platform"></General>
+      <File Name="Scheduler.java" OutputDirectory="realtime" Aspects="SchedulingSupport">
+         <Part>
+            package saito.sashimi.realtime;
+            import saito.sashimi.*;
+            
+            public abstract class Scheduler implements TimerInterface  {
+                 protected static Scheduler c_defaultScheduler = null;
+                 protected static int m_MainBaseStackPointer = 0xFFFF;
+           
+                 protected int m_currentTask = -1;
+                 protected boolean m_Processing = false;
+         </Part>
+         <Part Aspects="TimingAttributes">
+                public final static int MAX_APERIODIC_TASKS = 16;
+                protected static RealtimeThread m_AperiodicTaskList[] = {null, null, null, null, null, null, null, null,
+                                                         null, null, null, null, null, null, null, null};
+                protected int m_AperiodicListCount = 0;
+         </Part>
+         <Part Aspects="PeriodicTiming">
+                public final static int MAX_PERIODIC_TASKS = 16;
+                protected static RealtimeThread m_PeriodicTaskList[] = {null, null, null, null, null, null, null, null,
+                                                        null, null, null, null, null, null, null, null};
+                protected int m_PeriodicListCount = 0;
+         </Part>
+         <Part>
+                public abstract boolean isFeasible();
+                public abstract void runScheduler();
+                protected abstract int getContextOffsetForStaticMethod();
+                protected abstract int getContextOffsetForVirtualMethod();
+                
+                protected static int indexOf(RealtimeThread list[], int listCount, RealtimeThread schedulable) {
+                    int i = 0;
+                    for (; (i &lt; listCount) &amp;&amp; (list[i] != schedulable); i++);
+                    if (i &lt; listCount)
+                    	return i;
+                    else
+                    	return -1;
+                }
+                
+                protected static void addToListOrderByPriority(RealtimeThread list[], int listCount, RealtimeThread schedulable, int priority) {
+                    int i = 0;
+                    for(; (i &lt; listCount) &amp;&amp; (priority &lt;= ((PriorityParameters)list[i].getSchedulingParameters()).getPriority()); i++);
+                    if (i &lt; listCount) {
+                      for(int j = listCount; j > i; j--)
+                         list[j] = list[j-1];
+                      }
+                      list[i] = schedulable;
+                }
+         </Part>
+      </File>
+   </Software>
+</PlatformConfiguration>

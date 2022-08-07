@@ -1,0 +1,29 @@
+<File Name="Clock.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="SchedulingSupport, TimingAttributes, PeriodicTiming, TimeBoundedActivity, 
+               Jitter, DataFreshness, TolaratedDelay, ClockDrift">
+  <Fragment>
+	package saito.sashimi.realtime;
+	import saito.sashimi.*;
+	public class Clock {
+		protected static AbsoluteTime m_now = new AbsoluteTime();
+		public Clock()
+		{
+		}
+		public static void getTime( AbsoluteTime atime )
+		{
+			m_now.set(FemtoJava.getRTCDays(), FemtoJava.getRTCMiliseconds(), FemtoJava.getRTCNanoseconds());
+		//	__Simulation.getCurrentTime(m_now);
+			if( atime != null )
+				atime.set( m_now );    
+		}
+		
+		public static AbsoluteTime getTime()
+		{
+			//getTime( m_now );
+			m_now.set(FemtoJava.getRTCDays(), FemtoJava.getRTCMiliseconds(), FemtoJava.getRTCNanoseconds());
+		//	__Simulation.getCurrentTime(m_now);
+			return m_now;
+		}
+	}
+  </Fragment>
+</File>

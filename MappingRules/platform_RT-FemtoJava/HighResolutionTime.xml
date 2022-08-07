@@ -1,0 +1,115 @@
+<File Name="HighResolutionTime.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="SchedulingSupport, TimingAttributes, PeriodicTiming, TimeBoundedActivity, 
+               Jitter, DataFreshness, TolaratedDelay, ClockDrift">
+  <Fragment>
+	package saito.sashimi.realtime;
+	
+	public abstract class HighResolutionTime implements Comparable {
+	  protected int m_iDays = 0;
+	  protected int m_iMillis = 0;
+	  protected int m_iNanos = 0;
+	  
+	  public static final int c_iMillisPerDay = 86400000;
+	  public static final int c_iNanosPerMillis = 1000; // Microseconds
+	  public static final int factor = 1; // = frequency (MHz) div por 5
+	  
+	  public HighResolutionTime() {
+	  }
+	  
+	  protected static void _add( int iDays, int iMillis, int iNanos, HighResolutionTime hrtimeResult ) {
+		hrtimeResult.m_iNanos += iNanos;
+		if (hrtimeResult.m_iNanos > c_iNanosPerMillis) {
+		hrtimeResult.m_iNanos -= c_iNanosPerMillis;
+		hrtimeResult.m_iMillis++;
+		}
+		hrtimeResult.m_iMillis += iMillis;
+		if (hrtimeResult.m_iMillis > c_iMillisPerDay) {
+		hrtimeResult.m_iMillis -= c_iMillisPerDay;
+		hrtimeResult.m_iDays++;    
+		}
+		hrtimeResult.m_iDays += iDays;
+	  }
+	  
+	  protected static void _subtract( int iDays, int iMillis, int iNanos, 
+					 HighResolutionTime hrtimeResult ) {
+		hrtimeResult.m_iNanos -= iNanos;
+		if (hrtimeResult.m_iNanos &lt; 0) {
+		hrtimeResult.m_iNanos += c_iNanosPerMillis;
+		hrtimeResult.m_iMillis--;
+		}
+		hrtimeResult.m_iMillis -= iMillis;
+		if (hrtimeResult.m_iMillis &lt; 0) {
+		hrtimeResult.m_iMillis += c_iMillisPerDay;
+		hrtimeResult.m_iDays--;
+		}  
+		hrtimeResult.m_iDays -= iDays;
+	  }
+	  
+	  public int compareTo( HighResolutionTime time ) {
+		if (m_iDays > time.m_iDays)
+		return 1;
+		if (m_iDays &lt; time.m_iDays)
+		return -1;
+		if( m_iMillis > time.m_iMillis )
+		return 1;
+		if( m_iMillis &lt; time.m_iMillis )
+		return -1;      
+		return m_iNanos - time.m_iNanos;
+	  }
+	  
+	  public int compareTo( Object obj ) {
+		return compareTo( (HighResolutionTime) obj );
+	  }
+	  
+	  public boolean equals( HighResolutionTime time ) {
+		return (m_iDays == time.m_iDays) &amp;&amp; (m_iMillis == time.m_iMillis) &amp;&amp; (m_iNanos == time.m_iNanos);
+	  }
+	  
+	  public boolean equals( Object obj ) {
+		return equals( (HighResolutionTime) obj );
+	  }
+	  
+	  public final int getDays() {
+		return m_iDays;
+	  }
+	  
+	  public final int getMilliseconds() {
+		return m_iMillis;
+	  }
+	  
+	  public final int getNanoseconds() {
+		return m_iNanos;
+	  }
+	  
+	  public void set( HighResolutionTime time ) {
+		m_iDays = time.m_iDays;
+		m_iMillis = time.m_iMillis;
+		m_iNanos = time.m_iNanos;
+	  }
+	  
+	  public void set( int iDays, int iMillis, int iNanos ) {
+		m_iDays = iDays;
+		m_iMillis = iMillis;
+		m_iNanos   = iNanos;
+	  }
+	  
+	  public boolean isAssigned() {
+		return (m_iDays != 0) || (m_iMillis != 0) || (m_iNanos != 0);
+	  }
+	  
+	  public boolean isGreaterThanZero() {
+		return (m_iDays > 0) 
+		   || ((m_iDays == 0) &amp;&amp; (m_iMillis > 0))
+		   || ((m_iDays == 0) &amp;&amp; (m_iMillis == 0) &amp;&amp; (m_iNanos > 0));
+	  }
+	  
+	  public int convertToFJTimeoutValue() {
+		return (m_iDays*c_iMillisPerDay + m_iMillis*c_iNanosPerMillis + m_iNanos)*factor;
+	  }
+	  
+	  public String toString() {
+		return "Time=" + m_iDays + "," + m_iMillis + "," + m_iNanos;
+	  }
+	}
+  </Fragment>
+</File>

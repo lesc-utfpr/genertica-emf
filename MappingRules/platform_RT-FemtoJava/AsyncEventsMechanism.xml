@@ -1,0 +1,158 @@
+<File Name="AsyncEventsMechanism.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimingAttributes, PeriodicTiming">
+  <Fragment>
+package saito.sashimi.realtime;
+
+import saito.sashimi.FemtoJavaIO;
+import saito.sashimi.FemtoJavaInterruptSystem;
+import saito.sashimi.FemtoJavaTimer;
+
+public class AsyncEventsMechanism extends AbstractPoolingServer {
+
+	public static AsyncEventsMechanism mechanism = null;
+	
+	private static AbsoluteTime m_asynceventResumeTime = new AbsoluteTime(0,5,0);
+	private static AbsoluteTime m_asynceventActiveTime = new AbsoluteTime(0,0,0);
+	private static RelativeTime m_asynceventPrevProcTime = new RelativeTime(0,0,0);
+	private static RelativeTime m_budgetTime = new RelativeTime(0,0,0);
+	
+	public static int MAX_ASYNC_EVENTS = 5;
+	private static AsyncEvent[] m_FiredAsyncEvents = {null, null, null, null, null};
+	private int m_EventCount = 0;
+	private int m_nxtPosEventList = 0;
+	private int m_insPosEventList = 0;
+	
+	public static int MAX_WAITING_TASKS = 5;
+	private static RealtimeThread[] m_WaitingTasks = {null, null, null, null, null};
+	private int m_WaitingTasksCount = 0;
+
+	public AsyncEventsMechanism() {
+		super();
+		m_ResumeTime = m_asynceventResumeTime;
+		m_ActiveTime = m_asynceventActiveTime;
+		m_PreviousProcessTime = m_asynceventPrevProcTime;
+	}
+	
+	public AsyncEventsMechanism(SchedulingParameters schedulingParameters, ReleaseParameters releaseParameters) {
+		super(schedulingParameters, releaseParameters);
+		m_ResumeTime = m_asynceventResumeTime;
+		m_ActiveTime = m_asynceventActiveTime;
+		m_PreviousProcessTime = m_asynceventPrevProcTime;
+	}
+
+	public AsyncEventsMechanism(SchedulingParameters schedulingParameters) {
+		super(schedulingParameters);
+		m_ResumeTime = m_asynceventResumeTime;
+		m_ActiveTime = m_asynceventActiveTime;
+		m_PreviousProcessTime = m_asynceventPrevProcTime;
+	}
+
+	public void fireAsyncEvent(AsyncEvent event) {
+		m_FiredAsyncEvents[m_insPosEventList] = event;
+		
+		m_insPosEventList++;
+		m_EventCount++;
+		if (m_insPosEventList >= MAX_ASYNC_EVENTS) 
+			m_insPosEventList = 0;
+
+		// queue overflow
+		if (m_EventCount > MAX_ASYNC_EVENTS){
+			m_EventCount--;
+			m_nxtPosEventList++;
+			if (m_nxtPosEventList >= MAX_ASYNC_EVENTS)
+				m_nxtPosEventList = 0;
+		}
+
+		// verify if any task is waiting the event
+		for(int i=0; (i &lt; m_WaitingTasksCount); i++) {
+			RealtimeThread task = m_WaitingTasks[i];
+			if (task.isWaitingForEvent(event)) {
+				task.unblockThread();
+				// remove task from waiting list
+				for(int j=i; j &lt; (m_WaitingTasksCount-1); j++)
+					m_WaitingTasks[j] = m_WaitingTasks[j+1];
+				m_WaitingTasks[m_WaitingTasksCount-1] = null;
+				m_WaitingTasksCount--;
+				// if task consume this event, it is necessary to exit the loop
+				if (task.canConsumeEvent())
+					i = MAX_WAITING_TASKS;
+				else
+					i--;
+			}
+		}
+	}
+	
+	public boolean addWaitingTask(RealtimeThread task) {
+		if (m_WaitingTasksCount &lt; MAX_WAITING_TASKS) {
+			m_WaitingTasks[m_WaitingTasksCount] = task;
+			m_WaitingTasksCount++;
+			return true;
+		}
+		else
+			return false;
+	}
+	
+	public void removeWaitingTask(RealtimeThread task) {
+		int i =0;
+		// search for task
+		for(i=0; (i &lt; m_WaitingTasksCount) &amp;&amp; (m_WaitingTasks[i] != task); i++);
+		// remove from list
+		for(int j=i; j &lt; m_WaitingTasksCount; j++)
+			m_WaitingTasks[j] = m_WaitingTasks[j+1];
+		m_WaitingTasks[m_WaitingTasksCount] = null;
+		m_WaitingTasksCount--;
+	}
+
+	public void mainTask() {
+		while (true) {
+			while (m_EventCount > 0) {
+				// ensure that this code won't be interrupted 
+				FemtoJavaInterruptSystem.setEnable(0x6F); //x1101111 -> REC=1 EA=1 ES=0 ET1=1 EX1=1 ET0=1 EX0=1
+				int x = m_nxtPosEventList; // only to ensure that an overflow in event list doesn't affect the execution
+				AsyncEvent event = m_FiredAsyncEvents[x];
+				// re-enable interruptions mechanism
+				FemtoJavaInterruptSystem.setEnable(0x2F); //x0101111 -> REC=0 EA=1 ES=0 ET1=1 EX1=1 ET0=1 EX0=1
+				
+				if ((event != null) &amp;&amp; (event.m_AttachedAsyncEventHandler != null)) {
+					event.m_AttachedAsyncEventHandler.handleAsyncEvent();
+				}
+				
+				if (x == m_nxtPosEventList) {
+                    // ensure that this code won't be interrupted 
+					FemtoJavaInterruptSystem.setEnable(0x6F); //x1101111 -> REC=1 EA=1 ES=0 ET1=1 EX1=1 ET0=1 EX0=1
+					m_FiredAsyncEvents[x] = null;
+					m_nxtPosEventList++;
+					m_EventCount--;
+					if (m_nxtPosEventList >= MAX_ASYNC_EVENTS)
+						m_nxtPosEventList = 0;
+					// re-enable interruptions mechanism
+					FemtoJavaInterruptSystem.setEnable(0x2F); //x0101111 -> REC=0 EA=1 ES=0 ET1=1 EX1=1 ET0=1 EX0=1
+				}
+			}
+			waitForNextPeriod();
+		}
+	}
+	
+	public void exceptionTask() {}
+	protected void initializeStack() {}
+	public void addAperiodicTaskToExecute(RealtimeThread task) {}
+
+	public void setupPoolServerBubgetTimer() {
+        // set and active budget timer
+		FemtoJavaInterruptSystem.setEnable(0x2F);
+		FemtoJavaTimer.setTimer1(m_budgetTime.convertToFJTimeoutValue());
+		FemtoJavaTimer.startTimer1();
+	}
+	
+	protected void calculeRemainingBudget() {
+		AbsoluteTime tmp = Clock.getTime();
+		tmp.subtract(m_ActiveTime.getDays(), m_ActiveTime.getMilliseconds(), m_ActiveTime.getNanoseconds());
+        m_budgetTime.subtract(tmp.getDays(), tmp.getMilliseconds(), tmp.getNanoseconds());
+	}
+	
+	protected void replanishBudget(){
+		m_budgetTime.set(getReleaseParameters().getCost());
+	}
+}
+  </Fragment>
+</File>

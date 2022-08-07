@@ -1,0 +1,23 @@
+<File Name="TimeTriggeredRealtimeThread.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimingAttributes, PeriodicTiming">
+  <Fragment>
+package saito.sashimi.realtime;
+
+public abstract class TimeTriggeredRealtimeThread extends RealtimeThread {
+
+	public void addToFeasibility(RelativeTime activationTime) {
+		m_ResumeTime.add(activationTime);
+		initializeStack();
+		//((TimeTriggeredScheduler)Scheduler.c_defaultScheduler).addToFeasibility((RealtimeThread)this, activationTime);
+	}
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+	public boolean waitForNextPeriod() {
+		Scheduler.c_defaultScheduler.restoreMainContext();
+		return true;
+	}
+  </Fragment>
+  <Fragment>
+}
+  </Fragment>
+</File>

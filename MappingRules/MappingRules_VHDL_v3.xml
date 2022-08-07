@@ -1,0 +1,2936 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Platforms>
+  <!--**********************************************************************-->
+  <!--*          Configuration for VHDL                                    *-->
+  <!--**********************************************************************-->
+  <VHDL>
+    <!-- Mapping rules for APPLICATION CODE -->
+    <Application>
+      <Software>
+        <!-- Source code generation options -->
+        <SourceOptions isAspectLanguage="no" ClassesPerFile="1" 
+                       hasClassesDeclaration="no" hasPackagesDeclaration="yes" isPackagePerClass="no" Identation="5"
+                       BlockStart="begin" BlockEnd="end" PackageName="types_packages">
+          <FileNameConvention>$Class.Name</FileNameConvention>
+          <Package>
+				$CodeGenerator.getEnumerationDeclaration(1)
+		  </Package>
+          <SourceReference>
+		  </SourceReference>
+          <SourceOrganization>
+            <DeclarationFile FileExtension=".vhd">
+				$SourceCode.PackagesDeclaration
+			</DeclarationFile>
+            <ImplementationFile FileExtension=".vhd">			
+			#if (!$Class.isAbstract()) 
+				\n$SourceCode.ReferencesDeclaration
+				\n$SourceCode.ClassesDeclaration
+				\n$SourceCode.ClassesImplementation
+				\n$CodeGenerator.getMessagesImplementation(1)
+				#if ($Class.SuperClass)
+					#set ($superClass = $Class.getSuperClass())
+					##neste caso precisa incluir os métodos concretos da super classe na classe filha
+					#foreach($MessageSuper in $superClass.getMethods())
+					#if ($superClass.isAbstract() or $MessageSuper.isAbstract())
+						#if ($MessageSuper.Name != $superClass.Name)
+								#if (!$MessageSuper.isGetSetMethod())
+									#if ($MessageSuper.getActiveMode())
+										\n${MessageSuper.Name}: process 
+										#set ($par = false)
+										#set ($lstParam = [])
+										#foreach ($param in $MessageSuper.getParameters())
+											#set ($tstAttr = $superClass.getAttribute($param.Name))
+											#set ($ls = true)
+											#if ($tstAttr)
+												#if ($tstAttr.getReadOnly())
+													#set ($ls = false)
+												#end
+											#end
+											#if ($ls)
+												#if ($velocityCount > 1), 
+												#else 
+												 (
+												 #set ($par = true)
+												#end
+												$param.Name 
+												#set ($add = $lstParam.add($param.Name))
+											#end
+										#end
+										#set ($lread = [])
+										#set ($lwrite = [])
+										#set($lread = $DERCSHelper.getListOfAttributesUsed($superClass, $MessageSuper.Name, 0))
+										#set($lwrite = $DERCSHelper.getListOfAttributesUsed($superClass, $MessageSuper.Name, 1))
+										#foreach($val in $lread)
+											#set ($printPar = true)
+											#foreach ($s in $lwrite)
+												#if ($s.contains($val.Name))
+													#set ($printPar = false)
+												#end
+											#end
+											#if (!$lstParam.contains($val.Name) and $printPar)
+												#set ($tstAttr = $superClass.getAttribute($val.Name))
+												#set ($ls = true)
+												#if ($tstAttr)
+													#if ($tstAttr.getReadOnly())
+														#set ($ls = false)
+													#end
+												#end
+												#if ($ls)
+													#if (($velocityCount > 1) or ($MessageSuper.getParametersCount() > 0))
+														, 
+													#else
+														(
+														#set ($par = true)
+													#end
+													$val.Name 
+												#end
+											#end
+										#end
+										#if ($par)
+											)
+										#end
+										\n	
+										\n$CodeGenerator.getVariablesDeclaration($MessageSuper.getTriggeredBehavior(),1)
+										\n
+										\n$Options.BlockStart
+										\n
+										\n$CodeGenerator.getActionsCode($MessageSuper.getTriggeredBehavior(),1) 
+										\n	
+										\n$Options.BlockEnd process ${MessageSuper.Name}; 
+										\n 						
+									#else
+										#set ($assyncBe = false)
+										#foreach ($allCls in $DERCSModel.getClasses())
+											#foreach ($MessageChk in $allCls.getMethods())
+												#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$MessageSuper))
+													#set ($assyncBe = true)
+												#end
+											#end
+										#end
+										##se a mensagem possuir um parâmetro,  sera sensivel a ele podendo executar a uma alteracao
+										#if (!$assyncBe and $MessageSuper.getParametersCount() > 0)
+											#foreach( $param in $MessageSuper.Parameters )
+												#foreach ($msgChk in $superClass.getMethods())
+													#if ($msgChk.isGetSetMethod() and $msgChk.getReturnType() == "Void" and $msgChk.getAssociatedAttribute().Name == $param.Name)
+														#set ($assyncBe = true)
+													#end
+												#end
+											#end
+										#end
+										#if($assyncBe)
+											\n${MessageSuper.Name}: process( 
+											#if ($MessageSuper.getParametersCount() == 0)
+												${MessageSuper.Name}Enable, 
+												reset 
+											#end
+											#foreach( $param in $MessageSuper.Parameters )
+												#if($CodeGenerator.getDataTypeStr($param.getDataType()) != "")
+													#if($param.getParameterKind() == "IN" or $param.getParameterKind() == "INOUT")
+														#if ($velocityCount > 1), #end
+														$param.Name 
+													#end
+												#end
+											#end
+											)
+											\n	
+											\n$CodeGenerator.getVariablesDeclaration($MessageSuper.getTriggeredBehavior(),1)
+											\n$Options.BlockStart
+											\n	
+											#if ($MessageSuper.getParametersCount() == 0)
+												\n
+												\n	if (reset='1') then
+												\n		-- signals initialization
+												\n
+												\n	elsif (${MessageSuper.Name}Enable'EVENT and ${MessageSuper.Name}Enable = '1') then 
+												\n
+											#end
+											\n$CodeGenerator.getActionsCode($MessageSuper.getTriggeredBehavior(),1) 
+											\n	
+											#if ($MessageSuper.getParametersCount() == 0)
+												\n	end if; 
+											#end
+											\n	
+											\n$Options.BlockEnd process ${MessageSuper.Name};
+											\n 
+										#end
+									#end
+								#end 
+							#end
+						#end
+					#end
+				#end
+				\n 				
+				\nend Behavioral; 
+			#end
+            </ImplementationFile>
+          </SourceOrganization>
+        </SourceOptions>   
+        
+        <!-- Mapping rules for PRIMARY ELEMENTS -->
+        <PrimaryElementsMapping>
+          <DataTypes>
+            <Array> 
+				#set( $dt = $DataType.getDataType() )
+				#if ($dt == "Enumeration")
+					#set ($nm = $CodeGenerator.getDataTypeStr($dt))
+				#else
+					#set ($nm = $dt)
+				#end
+				${nm}Array
+			</Array>
+            <Boolean>BOOLEAN</Boolean>
+            <Byte>STD_LOGIC_VECTOR (7 DOWNTO 0)	</Byte>
+            <Char>BIT</Char>
+            <Class></Class>
+            <DateTime>TIME</DateTime>
+            <EnumerationDefinition>
+			#set ($hasPck = false)
+			#foreach ($enum in $DERCSModel.getEnumerations())
+				#if (!$hasPck)
+					\nPACKAGE $Options.PackageName IS
+					\n	
+					#set ($hasPck = true)
+				#end
+				\n	
+				\n	TYPE $enum.getName() IS (
+				#foreach ($v in $enum.Values)
+					#if ($velocityCount > 1) , #end 
+					\n$v 
+				#end
+				);
+			#end
+			#foreach ($allCls in $DERCSModel.getClasses())
+				#foreach($tpAttr in $allCls.getAttributes())
+					#if ($tpAttr.getDataType().getSize() > 1)
+						#set( $dtarr = $tpAttr.getDataType().getDataType() )
+						#if ($dtarr == "Enumeration") 
+							#set ($nm = $CodeGenerator.getDataTypeStr($dtarr))
+						#else
+							#set ($nm = $dtarr)
+						#end
+						#set( $ini = $tpAttr.getDataType().getLowerValue() )
+						#set( $fim = $tpAttr.getDataType().getUpperValue() )
+						#if ( !$dtarr.getRepresent() and $tpAttr.Name != "")
+							#if (!$hasPck)
+								\nPACKAGE $Options.PackageName IS
+								\n	
+								#set ($hasPck = true)
+							#end
+							#if ($fim > 0)
+								#if ($ini > $fim)
+									#set($ini = $ini - 1)
+									\n
+									\n	TYPE ${nm}Array is ARRAY ($ini DOWNTO 0) OF $nm;
+								#else
+									#set($fim = $fim - 1)
+									\n
+									\n	TYPE ${nm}Array is ARRAY (0 TO $fim) OF $nm;
+								#end
+							#else
+								\n
+								\n	TYPE ${nm}Array is ARRAY (RANGE &lt;>) OF $nm;
+							#end
+							#set ($hasPck = true)
+						#end
+					#end
+				#end
+			#end
+			#if ($hasPck)
+				\n
+				\nEND $Options.PackageName;
+			#end
+			</EnumerationDefinition>
+            <Enumeration>$DataType.Name</Enumeration>
+            <Integer>INTEGER RANGE -32767 TO +32767</Integer>
+            <Long>INTEGER RANGE -2147483647 TO +2147483647</Long>
+            <Short>INTEGER RANGE -252 TO +252</Short>
+            <String>STRING</String>
+            <Void></Void>
+            <Double></Double>
+            <Float>REAL</Float>
+          </DataTypes>
+          <Visibilities>
+            <Private></Private>
+            <Protected></Protected>
+            <Public></Public>
+          </Visibilities>
+          <ParameterKinds>
+            <In></In>
+            <Out></Out>
+            <InOut></InOut>
+          </ParameterKinds>
+        </PrimaryElementsMapping>
+        
+        <!-- Mapping rules for CLASSES -->
+        <Classes>
+          <Declaration>
+			-- Basic libraries
+			\nlibrary IEEE;
+			\nuse IEEE.STD_LOGIC_1164.ALL;
+			\nuse IEEE.STD_LOGIC_ARITH.ALL;
+			\nuse IEEE.STD_LOGIC_UNSIGNED.ALL;
+			\n
+			#set ($uses = false)
+			#foreach ($enum in $DERCSModel.getEnumerations())
+				#set ($uses = true)
+			#end
+			#if ($uses)
+				\nuse work.${Options.PackageName}.ALL;
+				\n
+			#end
+			\n
+			\nentity $Class.Name is
+			\n	Port (
+			\n	clock : in STD_LOGIC;
+			\n	reset : in STD_LOGIC
+			## Incluindo portas do circuito - sao inclusos todos que possuem get/set			
+   	        $CodeGenerator.getMessagesDeclaration(0) 
+			## verifica se o atributo e uma classe para incluir suas portas como portas - somente atributos de saida com metodos get 
+			#set ($lstMth = [])
+			#set ($superlstNew = [])
+			#if ($Class.getAttributesCount() > 0)
+				#foreach ($Message in $Class.getMethods())
+					#if ($Message.isGetSetMethod() and $Message.Name != $Class.Name and $Message.getReturnType() != "Void")
+						#if (!$lstMth.contains($Message.Name))
+							#set ($add = $lstMth.add($Message.Name))
+							#set ($newAttr = $Message.getAssociatedAttribute())
+							#set ($szMes = 0)
+							#if ($newAttr.getDataType().getSize() > 1)
+								#set ($dtType = $newAttr.getDataType().getDataType())
+								#set ($szMes =  $newAttr.getDataType().getSize() - 1)
+							#else
+								#set ($dtType = $newAttr.getDataType())
+							#end
+							#if ( $dtType.getRepresent() and $newAttr.Name != "")
+								#set ($lstAt = [])
+								#set( $NewClass = $dtType.getRepresent() )
+								#foreach ($x in [0..$szMes])
+									#foreach($MessageSec in $NewClass.getMethods())
+										#set($lwriteAt = [])
+										#set($lreadAt = [])
+										#if ($MessageSec.Name != $NewClass.Name)
+											#if ($MessageSec.isGetSetMethod())
+												#set ($attr = $MessageSec.getAssociatedAttribute())
+												#if ($attr.getDataType().getSize() > 1)
+													#set ($dtTypeSec = $attr.getDataType().getDataType())
+												#else
+													#set ($dtTypeSec = $attr.getDataType())
+												#end
+												#if (!$dtTypeSec.getRepresent())
+													#if ($szMes > 0)
+														#set ($mesAttrName = "${attr.Name}_${x}")
+													#else
+														#set ($mesAttrName = $attr.Name)
+													#end
+													#foreach ($msgGer in $NewClass.getMethods())
+														#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $NewClass.Name)
+															#set($add = $lwriteAt.add($DERCSHelper.getListOfAttributesUsed($NewClass, $msgGer.Name, 1)))
+															#set($add = $lreadAt.add($DERCSHelper.getListOfAttributesUsed($NewClass, $msgGer.Name, 0)))
+														#end
+													#end
+													#set ($print = true)
+													#if ($MessageSec.getReturnType() == "Void")
+														#foreach ($str in $lstAt)
+															#if ($str == $mesAttrName)
+																#set ($print = false)
+															#end
+														#end
+														#if ($print)															
+															#set($newDirection = "IN")
+															#foreach ($desLista in $lwriteAt)
+																#if ($desLista.contains($attr))
+																	#set($newDirection = "INOUT")
+																#end
+															#end
+															#if ($newDirection == "INOUT")
+																#set ($add = $lstAt.add($mesAttrName))
+																;
+																\n	${newAttr.Name}${mesAttrName} : $newDirection $CodeGenerator.getDataTypeStr($attr.getDataType())
+															#end
+														#end
+													#else
+														#foreach ($str in $lstAt)
+															#if ($str == $mesAttrName)
+																#set ($print = false)
+															#end
+														#end
+														#if ($print)
+															#set ($add = $lstAt.add($mesAttrName))
+															#set($newDirection = "OUT")
+															#foreach ($desLista in $lreadAt)
+																#if ($desLista.contains($attr))
+																	#set($newDirection = "INOUT")
+																#end
+															#end
+															#if ($newDirection == "OUT")
+																#foreach($MessageSet in $NewClass.getMethods())
+																	#if ($MessageSet.isGetSetMethod() and $MessageSet.getAssociatedAttribute().Name == $attr.Name  and $MessageSet.getReturnType() == "Void")
+																		#set($newDirection = "INOUT")
+																	#end
+																#end
+															#end
+															;
+															\n	${newAttr.Name}${mesAttrName} : $newDirection $CodeGenerator.getDataTypeStr($attr.getDataType())
+														#end
+													#end
+												#end
+											#end
+										#end
+									#end
+									#set($mapList = [])
+									#set ($add = $mapList.add($DERCSHelper.getListofRelatedMethods($NewClass)))
+									#set($tocEntry="")
+									#set ($superlstAt = [])
+									#foreach($tocList in $mapList)
+										#foreach($tocEntry in $tocList)
+											#set ($attrPai = $tocEntry.get("idx"))
+											#if ($attrPai.getDataType().getSize())
+												#set ($szPai = $attrPai.getDataType().getSize() - 1)
+											#else
+												#set ($szPai = 0)
+											#end
+											#foreach ($lstMth in $tocEntry.values())
+												#set($lst = [])
+												#foreach ($MsgRel in $lstMth)
+													#foreach ($i in [0..$szPai])
+														#set($lread = [])
+														#set($lwrite = [])
+														#if ($MsgRel.Name != $MsgRel.getOwnerClass().Name and $DERCSHelper.isPublic($MsgRel))
+															#if ($MsgRel.isGetSetMethod())
+																#set ($attr = $MsgRel.getAssociatedAttribute())
+																#if ($szPai > 0)
+																	#set ($attrName = "${attr.Name}_$i")
+																#else
+																	#set ($attrName = $attr.Name)
+																#end
+																#if ($szMes > 0)
+																	#set ($attrName = "${attrName}_$x")
+																#end															
+																#set ($attrClass = $attr.getOwnerClass())
+																#if ($attr.getDataType().getSize() > 1)
+																	#set ($dtTypeRel = $attr.getDataType().getDataType())
+																#else
+																	#set ($dtTypeRel = $attr.getDataType())
+																#end
+																#if (!$dtTypeRel.getRepresent())
+																	#foreach ($msgGer in $attrClass.getMethods())
+																		#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $attrClass.Name)
+																			#set($add = $lread.add($DERCSHelper.getListOfAttributesUsed($attrClass, $msgGer.Name, 0)))
+																			#set($add = $lwrite.add($DERCSHelper.getListOfAttributesUsed($attrClass, $msgGer.Name, 1)))
+																		#end
+																	#end
+																	#set ($print = true)
+																	#if ($MsgRel.getReturnType() == "Void")
+																		#foreach ($str in $lst)
+																			#if ($str == $attrName))
+																				#set ($print = false)
+																			#end
+																		#end
+																		#if ($print)
+																			#set($newDirection = "IN")
+																			#foreach ($desLista in $lwrite)
+																				#if ($desLista.contains($attr))
+																					#set($newDirection = "INOUT")
+																				#end
+																			#end
+																			#if ($newDirection == "INOUT")
+																				#set ($add = $lst.add($attrName))
+																				;
+																				\n	${newAttr.Name}${attrPai.Name}${attrName} : $newDirection $CodeGenerator.getDataTypeStr($attr.getDataType())
+																			#end
+																		#end
+																	#else
+																		#foreach ($str in $lst)
+																			#if ($str == $attrName)
+																				#set ($print = false)
+																			#end
+																		#end
+																		#if ($print)
+																			#set ($add = $lst.add($attrName))
+																			#set($newDirection = "OUT")
+																			#foreach ($desLista in $lread)
+																				#if ($desLista.contains($attr))
+																					#set($newDirection = "INOUT")
+																				#end
+																			#end
+																			;
+																			\n	${newAttr.Name}${attrPai.Name}${attrName} : $newDirection $CodeGenerator.getDataTypeStr($attr.getDataType())
+																		#end
+																	#end
+																#end
+															#end
+														#end
+													#end
+												#end
+											#end
+											#set ($superdtType = $attrPai.getDataType())
+											#if ($superdtType.getRepresent())
+												#set($repAttrPai = $superdtType.getRepresent())
+												## verifica se a classe e uma generalizacao para incluir suas portas como sinais - para os que não possuem get/set
+												#if ($repAttrPai.SuperClass)
+													#set ($superClass = $repAttrPai.getSuperClass())
+													#set ($printSuper = true)
+													#foreach ($superMessage in $superClass.getMethods())
+														#set($superwriteAt = [])
+														#set($superreadAt = [])
+														#if ($superMessage.Name != $superClass.Name)
+															#if ($superMessage.isGetSetMethod())
+																#set ($superAttr = $superMessage.getAssociatedAttribute())
+																#if ($superAttr.getDataType().getSize() > 1)
+																	#set ($dtTypeSec = $superAttr.getDataType().getDataType())
+																#else
+																	#set ($dtTypeSec = $superAttr.getDataType())
+																#end
+																#if (!$dtTypeSec.getRepresent())
+																	#if ($superClass.isAbstract())
+																		## nesse caso a super classe nao é componente, os seus sinais sao incorporados na classe filha
+																		#set ($superMesAttrName = "${newAttr.Name}${repAttrPai.Name}${superAttr.Name}")
+																	#else
+																		## nesse caso são inclusos os sinais para mapeamento dos componentes
+																		#set ($superMesAttrName = "${newAttr.Name}${repAttrPai.Name}${superClass.Name}${superAttr.Name}")
+																	#end
+																	#foreach ($msgGer in $superClass.getMethods())
+																		#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $superClass.Name)
+																			#set($add = $superwriteAt.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 1)))
+																			#set($add = $superreadAt.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 0)))
+																		#end
+																	#end
+																	#set ($print = true)
+																	#if ($superMessage.getReturnType() == "Void")
+																		#foreach ($str in $superlstAt)
+																			#if ($str == $superMesAttrName)
+																				#set ($print = false)
+																			#end
+																		#end
+																		#if ($print)															
+																			#set($newDirection = "IN")
+																			#foreach ($desLista in $superwriteAt)
+																				#if ($desLista.contains($superAttr))
+																					#set($newDirection = "INOUT")
+																				#end
+																			#end
+																			#if ($newDirection == "INOUT")
+																				#set ($add = $superlstAt.add($superMesAttrName))
+																				;
+																				\n	${superMesAttrName} : $newDirection $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+																			#end
+																		#end
+																	#else
+																		#foreach ($str in $superlstAt)
+																			#if ($str == $superMesAttrName)
+																				#set ($print = false)
+																			#end
+																		#end
+																		#if ($print)
+																			#set ($add = $superlstAt.add($superMesAttrName))
+																			#set($newDirection = "OUT")
+																			#foreach ($desLista in $superreadAt)
+																				#if ($desLista.contains($superAttr))
+																					#set($newDirection = "INOUT")
+																				#end
+																			#end
+																			;
+																			\n	${superMesAttrName} : $newDirection $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+																		#end
+																	#end
+																#end
+															#end
+														#end
+													#end
+												#end
+											#end
+										#end
+									#end
+									##se a classe associada possuir uma superclasse
+									## verifica se a classe e uma generalizacao para incluir suas portas como sinais - para os que não possuem get/set
+									#if ($NewClass.SuperClass)
+										#set ($superClass = $NewClass.getSuperClass())
+										#set ($printSuper = true)
+										#foreach ($superMessage in $superClass.getMethods())
+											#set($superwriteAt = [])
+											#set($superreadAt = [])
+											#if ($superMessage.Name != $superClass.Name)
+												#if ($superMessage.isGetSetMethod())
+													#set ($superAttr = $superMessage.getAssociatedAttribute())
+													#if ($superAttr.getDataType().getSize() > 1)
+														#set ($dtTypeSec = $superAttr.getDataType().getDataType())
+													#else
+														#set ($dtTypeSec = $superAttr.getDataType())
+													#end
+													#if (!$dtTypeSec.getRepresent())
+														#if ($superClass.isAbstract())
+															## nesse caso a super classe nao é componente, os seus sinais sao incorporados na classe filha
+															#set ($superMesAttrName = "${NewClass.Name}${superAttr.Name}")
+														#else
+															## nesse caso são inclusos os sinais para mapeamento dos componentes
+															#set ($superMesAttrName = "${NewClass.Name}${superClass.Name}${superAttr.Name}")
+														#end
+														#foreach ($msgGer in $superClass.getMethods())
+															#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $superClass.Name)
+																#set($add = $superwriteAt.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 1)))
+																#set($add = $superreadAt.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 0)))
+															#end
+														#end
+														#set ($print = true)
+														#if ($superMessage.getReturnType() == "Void")
+															#foreach ($str in $superlstNew)
+																#if ($str == $superMesAttrName)
+																	#set ($print = false)
+																#end
+															#end
+															#if ($print)															
+																#set($newDirection = "IN")
+																#foreach ($desLista in $superwriteAt)
+																	#if ($desLista.contains($superAttr))
+																		#set($newDirection = "INOUT")
+																	#end
+																#end
+																#if ($newDirection == "INOUT")
+																	#set ($add = $superlstNew.add($superMesAttrName))
+																	;
+																	\n	${superMesAttrName} : $newDirection $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+																#end
+															#end
+														#else
+															#foreach ($str in $superlstNew)
+																#if ($str == $superMesAttrName)
+																	#set ($print = false)
+																#end
+															#end
+															#if ($print)
+																#set ($add = $superlstNew.add($superMesAttrName))
+																#set($newDirection = "OUT")
+																#foreach ($desLista in $superreadAt)
+																	#if ($desLista.contains($superAttr))
+																		#set($newDirection = "INOUT")
+																	#end
+																#end
+																;
+																\n	${superMesAttrName} : $newDirection $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+															#end
+														#end
+													#end
+												#end
+											#end
+										#end
+									#end
+								#end
+							#end
+						#end
+					#end
+				#end
+			#end
+			## verifica se a classe e uma generalizacao para incluir suas portas como sinais - para os que não possuem get/set
+			#if ($Class.SuperClass)
+				#set ($superClass = $Class.getSuperClass())
+				#set ($printSuper = true)
+				#set ($superlstAt = [])
+				#foreach ($superMessage in $superClass.getMethods())
+					#set($superwriteAt = [])
+					#set($superreadAt = [])
+					#if ($superMessage.Name != $superClass.Name)
+						#if ($superMessage.isGetSetMethod())
+							#set ($superAttr = $superMessage.getAssociatedAttribute())
+							#if ($superAttr.getDataType().getSize() > 1)
+								#set ($dtTypeSecSuper = $superAttr.getDataType().getDataType())
+							#else
+								#set ($dtTypeSecSuper = $superAttr.getDataType())
+							#end
+							#if (!$dtTypeSecSuper.getRepresent())
+								#if ($superClass.isAbstract())
+									## nesse caso a super classe nao é componente, os seus sinais sao incorporados na classe filha
+									#set ($superMesAttrName = $superAttr.Name)
+								#else
+									## nesse caso são inclusos os sinais para mapeamento dos componentes
+									#set ($superMesAttrName = "${superClass.Name}${superAttr.Name}")
+								#end
+								#foreach ($msgGerSuper in $superClass.getMethods())
+									#if (!$msgGerSuper.isGetSetMethod() and $msgGerSuper.Name != $superClass.Name)
+										#set($add = $superwriteAt.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGerSuper.Name, 1)))
+										#set($add = $superreadAt.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGerSuper.Name, 0)))
+									#end
+								#end
+								#set ($printSuper = true)
+								#if ($superMessage.getReturnType() == "Void")
+									#foreach ($str in $superlstAt)
+										#if ($str == $superMesAttrName)
+											#set ($printSuper = false)
+										#end
+									#end
+									#if ($printSuper)
+										#set($newDirection = "IN")
+										#foreach ($desLista in $superwriteAt)
+											#if ($desLista.contains($superAttr))
+												#set($newDirection = "INOUT")
+											#end
+										#end
+										#set ($add = $superlstAt.add($superMesAttrName))
+										;
+										\n	${superMesAttrName} : $newDirection $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+									#end
+								#else
+									#foreach ($str in $superlstAt)
+										#if ($str == $superMesAttrName)
+											#set ($printSuper = false)
+										#end
+									#end
+									#if ($printSuper)
+										#set ($add = $superlstAt.add($superMesAttrName))
+										#set($newDirection = "OUT")
+										#foreach ($desLista in $superreadAt)
+											#if ($desLista.contains($superAttr))
+												#set($newDirection = "INOUT")
+											#end
+										#end
+										;
+										\n	${superMesAttrName} : $newDirection $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+									#end
+								#end
+							#end
+						#end
+					#end
+				#end
+			#end
+			);
+			\nend $Class.Name;
+			\n	
+			\narchitecture Behavioral of $Class.Name is
+			\n
+			## Sinais e constantes da arquitetura - sao aqueles que nao possuem get/set
+			\n$CodeGenerator.getAttributesDeclaration(0)
+			\n
+			## verifica se a classe e uma generalizacao para incluir suas portas como sinais - para os que não possuem get
+			#if ($Class.SuperClass)
+				#set ($superClass = $Class.getSuperClass())
+				#foreach ($superAttr in $superClass.getAttributes())
+					#set ($printSuper = true)
+					#foreach ($superMessage in $superClass.getMethods())
+						#if ($superMessage.Name != $superClass.Name and $superMessage.isGetSetMethod() and $superMessage.getAssociatedAttribute().Name == $superAttr.Name)
+							#set ($printSuper = false)
+							##set ($superWrite = [])
+							##foreach ($msgGer in $superClass.getMethods())
+								##if (!$msgGer.isGetSetMethod() and $msgGer.Name != $superClass.Name)
+									##set($add = $superWrite.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 1)))
+								##end
+							##end
+							##foreach ($desLista in $superWrite)
+								##if ($desLista.contains($superAttr))
+									##set ($printSuper = false)
+								##end
+							##end
+						#end
+					#end
+					#if ($printSuper)
+						#if ($DERCSHelper.isPrivate($superAttr))
+							#if ($superClass.isAbstract())
+								## nesse caso a super classe nao é componente, os seus sinais sao incorporados na classe filha
+								#set ($superAttrName = $superAttr.Name)
+							#else
+								## nesse caso são inclusos os sinais para mapeamento dos componentes
+								#set ($superAttrName = "${superClass.Name}${superAttr.Name}")
+							#end
+							#if ($superAttr.getReadOnly())
+								\n	constant $superAttrName : $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+							#else
+								\n	signal $superAttrName : $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+							#end
+							#if ($superAttr.getDefaultValue() != "")
+								:= $superAttr.getDefaultValue()
+							#elseif( $superAttr.getDataType().toString() == "Integer")
+								:= 0
+							#elseif( $superAttr.getDataType().toString() == "Short")
+								:= 0
+							#elseif( $superAttr.getDataType().toString() == "Long")
+								:= 0
+							#elseif( $superAttr.getDataType().toString() == "Boolean" )
+								:= FALSE
+							#elseif( $superAttr.getDataType().toString() == "Byte" )
+								:= "00000000"
+							#elseif( $superAttr.getDataType().toString() == "Float" )
+								:= 0
+							#elseif( $superAttr.getDataType().toString() == "Char" )
+								:= '0'
+							#end
+							;
+						#end
+					#end
+				#end
+			#end
+			## declaração de sinais de enable para mensagens assícronas
+			#foreach($Message in $Class.getMethods())
+				#if (!$Message.getActiveMode() and $Message.Name != $Class.Name and !$Message.isGetSetMethod() and $Message.getParametersCount() == 0)
+					#if ($DERCSHelper.isPrivate($Message))
+						#set ($assyncBe = false)
+						#foreach ($allCls in $DERCSModel.getClasses())
+							#foreach ($MessageChk in $allCls.getMethods())
+								#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$Message))
+									#set ($assyncBe = true)
+								#end
+							#end
+						#end
+						#if($assyncBe)
+							\n
+							\n	-- The Signal to control the process ${Message.Name} execution
+							\n	signal ${Message.Name}Enable : BIT := '0';
+						#end
+					#end
+				#end
+			#end
+			\n	
+			## declaração de componentes - associacao / agregacao / composicao
+			#if ($Class.getAttributesCount() > 0)
+				##variaveis para verificar se um componente é instanciado mais de uma vez no modelo - deve ser instanciado somente uma vez no vhdl
+				#set($lstComp = [])
+				#foreach ($Attribute in $Class.getAttributes())
+					#set($lstVar = [])
+					#if ($Attribute.getDataType().getSize() > 1)
+						#set ($dtType = $Attribute.getDataType().getDataType())
+					#else
+						#set ($dtType = $Attribute.getDataType())
+					#end
+					#if ( $dtType.getRepresent() and $Attribute.Name != "")
+						#set( $NewClass = $dtType.getRepresent() )
+						#set($mapList = [])
+						#set ($add = $mapList.add($DERCSHelper.getListofRelatedMethods($NewClass)))
+						#set($tocEntry="")
+						#set ($printComp = true)
+						#foreach ($str in $lstComp)
+							#if ($str == $NewClass.Name)
+								#set ($printComp = false)
+							#end
+						#end
+						#if ($printComp)
+							#set ($add = $lstComp.add($NewClass.Name))
+							\n	
+							\n	
+							\n	component $NewClass.Name IS
+							\n		port (
+							\n		clock : in STD_LOGIC;
+							\n		reset : in STD_LOGIC
+							#foreach($Message in $NewClass.getMethods())
+								#if ($Message.Name != $NewClass.Name)
+									#set($lread = [])
+									#set($lwrite = [])
+									#if ($Message.isGetSetMethod())
+										#set ($newAttr = $Message.getAssociatedAttribute())
+										#if ($newAttr.getDataType().getSize() > 1)
+											#set ($newdtType = $newAttr.getDataType().getDataType())
+										#else
+											#set ($newdtType = $newAttr.getDataType())
+										#end
+										#foreach ($msgGer in $NewClass.getMethods())
+											#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $NewClass.Name)
+												#set($add = $lread.add($DERCSHelper.getListOfAttributesUsed($NewClass, $msgGer.Name, 0)))
+												#set($add = $lwrite.add($DERCSHelper.getListOfAttributesUsed($NewClass, $msgGer.Name, 1)))
+											#end
+										#end
+										#if (!$newdtType.getRepresent())
+											#set ($printVar = true)
+											#if ($Message.getReturnType() == "Void")
+												#foreach ($str in $lstVar)
+													#if ($str == $newAttr.Name)
+														#set ($printVar = false)
+													#end
+												#end
+												#if ($printVar)
+													#set ($add = $lstVar.add($newAttr.Name))
+													#set($newDirection = "IN")
+													#foreach ($desLista in $lwrite)
+														#if ($desLista.contains($newAttr))
+															#set($newDirection = "INOUT")
+														#end
+													#end
+													#foreach($MessageGet in $NewClass.getMethods())
+														#if($MessageGet.isGetSetMethod() and $MessageGet.getReturnType() != "Void" and $MessageGet.getAssociatedAttribute().Name == $newAttr.Name)
+															#set($newDirection = "INOUT")
+														#end
+													#end
+													;
+													\n		${newAttr.Name} : $newDirection $CodeGenerator.getDataTypeStr($newAttr.getDataType())
+												#end
+											#else
+												#foreach ($str in $lstVar)
+													#if ($str == $newAttr.Name)
+														#set ($printVar = false)
+													#end
+												#end
+												#if ($printVar)
+													#set($newDirection = "OUT")
+													#foreach ($desLista in $lread)
+														#if ($desLista.contains($newAttr))
+															#set($newDirection = "INOUT")
+														#end
+													#end
+													#set($print = true)
+													#foreach($MessageSet in $NewClass.getMethods())
+														#if($MessageSet.isGetSetMethod() and $MessageSet.getReturnType() == "Void" and $MessageSet.getAssociatedAttribute().Name == $newAttr.Name)
+															#set($print = false)
+														#end
+													#end
+													#if($print)
+														#set ($add = $lstVar.add($newAttr.Name))
+														;
+														\n		${newAttr.Name} : $newDirection $CodeGenerator.getDataTypeStr($newAttr.getDataType())
+													#end
+												#end
+											#end
+										#end
+									##Incluir sinais de enable para processos assincronos - somente metodos publicos e sem parametros
+									#elseif (!$Message.getActiveMode() and $Message.getParametersCount() == 0)
+										#if ($DERCSHelper.isPublic($Message))
+											#set ($assyncBe = false)
+											#foreach ($allCls in $DERCSModel.getClasses())
+												#foreach ($MessageChk in $allCls.getMethods())
+													#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$Message))
+														#set ($assyncBe = true)
+													#end
+												#end
+											#end
+											#if($assyncBe)
+												;
+												\n		${Message.Name}Enable : INOUT BIT
+											#end
+										#end
+									#end
+								#end
+							#end
+							## verifica se a classe e uma generalizacao para incluir suas portas como sinais - para os que não possuem get/set
+							#if ($NewClass.SuperClass)
+								#set ($superClass = $NewClass.getSuperClass())
+								#set ($printSuper = true)
+								#set ($superlstAt = [])
+								#foreach ($superMessage in $superClass.getMethods())
+									#set($superwriteAt = [])
+									#set($superreadAt = [])
+									#if ($superMessage.Name != $superClass.Name)
+										#if ($superMessage.isGetSetMethod())
+											#set ($superAttr = $superMessage.getAssociatedAttribute())
+											#if ($superAttr.getDataType().getSize() > 1)
+												#set ($dtTypeSec = $superAttr.getDataType().getDataType())
+											#else
+												#set ($dtTypeSec = $superAttr.getDataType())
+											#end
+											#if (!$dtTypeSec.getRepresent())
+												#if ($superClass.isAbstract())
+													## nesse caso a super classe nao é componente, os seus sinais sao incorporados na classe filha
+													#set ($superMesAttrName = $superAttr.Name)
+												#else
+													## nesse caso são inclusos os sinais para mapeamento dos componentes
+													#set ($superMesAttrName = "${superClass.Name}${superAttr.Name}")
+												#end
+												#foreach ($msgGer in $superClass.getMethods())
+													#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $superClass.Name)
+														#set($add = $superwriteAt.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 1)))
+														#set($add = $superreadAt.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 0)))
+													#end
+												#end
+												#set ($print = true)
+												#if ($superMessage.getReturnType() == "Void")
+													#foreach ($str in $superlstAt)
+														#if ($str == $superMesAttrName)
+															#set ($print = false)
+														#end
+													#end
+													#if ($print)
+														#set($newDirection = "IN")
+														#foreach ($desLista in $superwriteAt)
+															#if ($desLista.contains($superAttr))
+																#set($newDirection = "INOUT")
+															#end
+														#end
+														#if ($newDirection == "INOUT")
+															#set ($add = $superlstAt.add($superMesAttrName))
+															;
+															\n		${superMesAttrName} : $newDirection $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+														#end
+													#end
+												#else
+													#foreach ($str in $superlstAt)
+														#if ($str == $superMesAttrName)
+															#set ($print = false)
+														#end
+													#end
+													#if ($print)
+														#set ($add = $superlstAt.add($superMesAttrName))
+														#set($newDirection = "OUT")
+														#foreach ($desLista in $superreadAt)
+															#if ($desLista.contains($superAttr))
+																#set($newDirection = "INOUT")
+															#end
+														#end
+														;
+														\n		${superMesAttrName} : $newDirection $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+													#end
+												#end
+											#end
+										#end
+									#end
+								#end
+							#end
+							## mensagens relacionas ao atributo classe
+							#set ($superlstVar = [])
+							#set($lst = [])
+							#foreach($tocList in $mapList)
+								#foreach($tocEntry in $tocList)
+									#set ($attrPai = $tocEntry.get("idx"))
+									#if ($attrPai.getDataType().getSize())
+										#set ($szPai = $attrPai.getDataType().getSize() - 1)
+									#else
+										#set ($szPai = 0)
+									#end
+									#foreach ($lstMth in $tocEntry.values())
+										#foreach ($MsgRel in $lstMth)
+											#foreach ($i in [0..$szPai])
+												#set($lread = [])
+												#set($lwrite = [])
+												#if ($MsgRel.Name != $MsgRel.getOwnerClass().Name and $DERCSHelper.isPublic($MsgRel))
+													#if ($MsgRel.isGetSetMethod())
+														#set ($attr = $MsgRel.getAssociatedAttribute())
+														#if ($szPai > 0)
+															#set ($attrName = "${attrPai.Name}${attr.Name}_$i")
+														#else
+															#set ($attrName = "${attrPai.Name}${attr.Name}")
+														#end
+														#set ($attrClass = $attr.getOwnerClass())
+														#if ($attr.getDataType().getSize() > 1)
+															#set ($dtType = $attr.getDataType().getDataType())
+														#else
+															#set ($dtType = $attr.getDataType())
+														#end
+														#if (!$dtType.getRepresent())
+															#foreach ($msgGer in $attrClass.getMethods())
+																#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $attrClass.Name)
+																	#set($add = $lread.add($DERCSHelper.getListOfAttributesUsed($attrClass, $msgGer.Name, 0)))
+																	#set($add = $lwrite.add($DERCSHelper.getListOfAttributesUsed($attrClass, $msgGer.Name, 1)))
+																#end
+															#end
+															#set ($print = true)
+															#if ($MsgRel.getReturnType() == "Void")
+																#foreach ($str in $lst)
+																	#if ($str == $attrName)
+																		#set ($print = false)
+																	#end
+																#end
+																#if ($print)
+																	#set($newDirection = "IN")
+																	#foreach ($desLista in $lwrite)
+																		#if ($desLista.contains($attr))
+																			#set($newDirection = "INOUT")
+																		#end
+																	#end
+																	#if($newDirection == "INOUT")
+																		#set ($add = $lst.add($attrName))
+																		;
+																		\n		${attrName} : $newDirection $CodeGenerator.getDataTypeStr($dtType)
+																	#end
+																#end
+															#else
+																#foreach ($str in $lst)
+																	#if ($str == $attrName)
+																		#set ($print = false)
+																	#end
+																#end
+																#if ($print)
+																	#set ($add = $lst.add($attrName))
+																	#set($newDirection = "OUT")
+																	#foreach ($desLista in $lread)
+																		#if ($desLista.contains($attr))
+																			#set($newDirection = "INOUT")
+																		#end
+																	#end
+																	;
+																	\n		${attrName} : $newDirection $CodeGenerator.getDataTypeStr($dtType)
+																#end
+															#end
+														#end
+													#end
+												#end
+											#end
+										#end
+									#end
+									## verifica se a classe e uma generalizacao para incluir a super classe como componente - somente se for concreta
+									#set ($superdtType = $attrPai.getDataType())
+									#if ($superdtType.getRepresent())
+										#set($repAttrPai = $superdtType.getRepresent())
+										#if ($repAttrPai.SuperClass)
+											#set ($superClass = $repAttrPai.getSuperClass())
+											#if ($superClass.isAbstract())
+												#foreach($superMessage in $superClass.getMethods())
+													#if (!$superMessage.isAbstract() and $superMessage.Name != $superClass.Name)
+														#set($lread = [])
+														#set($lwrite = [])
+														#if ($superMessage.isGetSetMethod())
+															#set ($newAttr = $superMessage.getAssociatedAttribute())
+															#if ($newAttr.getDataType().getSize() > 1)
+																#set ($newdtType = $newAttr.getDataType().getDataType())
+															#else
+																#set ($newdtType = $newAttr.getDataType())
+															#end
+															#foreach ($msgGer in $superClass.getMethods())
+																#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $superClass.Name)
+																	#set($add = $lread.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 0)))
+																	#set($add = $lwrite.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 1)))
+																#end
+															#end
+															#if (!$newdtType.getRepresent())
+																#set ($nmPai = "")
+																#if ($attrPai.getOwnerClass().Name != $NewClass.Name)
+																	#set ($nmPai = $attrPai.getOwnerClass().Name)
+																#end
+																#if ($superClass.isAbstract())
+																	## nesse caso a super classe nao é componente, os seus sinais sao incorporados na classe filha
+																	#set ($superMesAttrName = "${nmPai}${repAttrPai.Name}${newAttr.Name}")
+																#else
+																	## nesse caso são inclusos os sinais para mapeamento dos componentes
+																	#set ($superMesAttrName = "${nmPai}${repAttrPai.Name}${superClass.Name}${newAttr.Name}")
+																#end
+																#set ($superPrintVar = true)
+																#if ($superMessage.getReturnType() == "Void")
+																	#foreach ($str in $superlstVar)
+																		#if ($str == $superMesAttrName)
+																			#set ($superPrintVar = false)
+																		#end
+																	#end
+																	#if ($superPrintVar)
+																		#set ($add = $superlstVar.add($superMesAttrName))
+																		#set($newDirection = "IN")
+																		#foreach ($desLista in $lwrite)
+																			#if ($desLista.contains($newAttr))
+																				#set($newDirection = "INOUT")
+																			#end
+																		#end
+																		#foreach($MessageGet in $superClass.getMethods())
+																			#if($MessageGet.isGetSetMethod() and $MessageGet.getReturnType() != "Void" and $MessageGet.getAssociatedAttribute().Name == $newAttr.Name)
+																				#set($newDirection = "INOUT")
+																			#end
+																		#end
+																		;
+																		\n		$superMesAttrName : $newDirection $CodeGenerator.getDataTypeStr($newAttr.getDataType())
+																	#end
+																#else
+																	#foreach ($str in $superlstVar)
+																		#if ($str == $superMesAttrName)
+																			#set ($superPrintVar = false)
+																		#end
+																	#end
+																	#if ($superPrintVar)
+																		#set($newDirection = "OUT")
+																		#foreach ($desLista in $lread)
+																			#if ($desLista.contains($newAttr))
+																				#set($newDirection = "INOUT")
+																			#end
+																		#end
+																		#set($print = true)
+																		#foreach($MessageSet in $superClass.getMethods())
+																			#if($MessageSet.isGetSetMethod() and $MessageSet.getReturnType() == "Void" and $MessageSet.getAssociatedAttribute().Name == $newAttr.Name)
+																				#set($print = false)
+																			#end
+																		#end
+																		#if($print)
+																			#set ($add = $superlstVar.add($superMesAttrName))
+																			;
+																			\n		$superMesAttrName : $newDirection $CodeGenerator.getDataTypeStr($newAttr.getDataType())
+																		#end
+																	#end
+																#end
+															#end
+														##Incluir sinais de enable para processos assincronos - somente metodos publicos e sem parametros
+														#elseif (!$superMessage.getActiveMode() and $superMessage.getParametersCount() == 0)
+															#if ($DERCSHelper.isPublic($superMessage))
+																#set ($assyncBe = false)
+																#foreach ($allCls in $DERCSModel.getClasses())
+																	#foreach ($MessageChk in $allCls.getMethods())
+																		#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$superMessage))
+																			#set ($assyncBe = true)
+																		#end
+																	#end
+																#end
+																#if($assyncBe)
+																	;
+																	\n		${nmPai}${repAttrPai.Name}${superMessage.Name}Enable : INOUT BIT
+																#end
+															#end
+														#end
+													#end
+												#end
+											#end
+										#end
+									#end
+								#end
+							#end
+							\n	
+							\n		); 
+							\n	end component;
+							\n	
+						#end
+					#end
+				#end
+			#end 
+			## verifica se a classe e uma generalizacao para incluir a super classe como componente - somente se for concreta
+			#if ($Class.SuperClass)
+				#set ($superClass = $Class.getSuperClass())
+				#if (!$superClass.isAbstract())
+					#set($lstVar = [])
+					\n	
+					\n	
+					\n	component $superClass.Name IS
+					\n		port (
+					\n		clock : in STD_LOGIC;
+					\n		reset : in STD_LOGIC
+					#foreach($superMessage in $superClass.getMethods())
+						#if (!$superMessage.isAbstract() and $superMessage.Name != $superClass.Name)
+							#set($lread = [])
+							#set($lwrite = [])
+							#if ($superMessage.isGetSetMethod())
+								#set ($newAttr = $superMessage.getAssociatedAttribute())
+								#if ($newAttr.getDataType().getSize() > 1)
+									#set ($newdtType = $newAttr.getDataType().getDataType())
+								#else
+									#set ($newdtType = $newAttr.getDataType())
+								#end
+								#foreach ($msgGer in $superClass.getMethods())
+									#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $superClass.Name)
+										#set($add = $lread.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 0)))
+										#set($add = $lwrite.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 1)))
+									#end
+								#end
+								#if (!$newdtType.getRepresent())
+									#set ($printVar = true)
+									#if ($superMessage.getReturnType() == "Void")
+										#foreach ($str in $lstVar)
+											#if ($str == $newAttr.Name)
+												#set ($printVar = false)
+											#end
+										#end
+										#if ($printVar)
+											#set ($add = $lstVar.add($newAttr.Name))
+											#set($newDirection = "IN")
+											#foreach ($desLista in $lwrite)
+												#if ($desLista.contains($newAttr))
+													#set($newDirection = "INOUT")
+												#end
+											#end
+											#foreach($MessageGet in $superClass.getMethods())
+												#if($MessageGet.isGetSetMethod() and $MessageGet.getReturnType() != "Void" and $MessageGet.getAssociatedAttribute().Name == $newAttr.Name)
+													#set($newDirection = "INOUT")
+												#end
+											#end
+											;
+											\n		${newAttr.Name} : $newDirection $CodeGenerator.getDataTypeStr($newAttr.getDataType())
+										#end
+									#else
+										#foreach ($str in $lstVar)
+											#if ($str == $newAttr.Name)
+												#set ($printVar = false)
+											#end
+										#end
+										#if ($printVar)
+											#set($newDirection = "OUT")
+											#foreach ($desLista in $lread)
+												#if ($desLista.contains($newAttr))
+													#set($newDirection = "INOUT")
+												#end
+											#end
+											#set($print = true)
+											#foreach($MessageSet in $superClass.getMethods())
+												#if($MessageSet.isGetSetMethod() and $MessageSet.getReturnType() == "Void" and $MessageSet.getAssociatedAttribute().Name == $newAttr.Name)
+													#set($print = false)
+												#end
+											#end
+											#if($print)
+												#set ($add = $lstVar.add($newAttr.Name))
+												;
+												\n		${newAttr.Name} : $newDirection $CodeGenerator.getDataTypeStr($newAttr.getDataType())
+											#end
+										#end
+									#end
+								#end
+							##Incluir sinais de enable para processos assincronos - somente metodos publicos e sem parametros
+							#elseif (!$superMessage.getActiveMode() and $superMessage.getParametersCount() == 0)
+								#if ($DERCSHelper.isPublic($superMessage))
+									#set ($assyncBe = false)
+									#foreach ($allCls in $DERCSModel.getClasses())
+										#foreach ($MessageChk in $allCls.getMethods())
+											#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$superMessage))
+												#set ($assyncBe = true)
+											#end
+										#end
+									#end
+									#if($assyncBe)
+										;
+										\n		${superMessage.Name}Enable : INOUT BIT
+									#end
+								#end
+							#end
+						#end
+					#end	
+					\n	
+					\n		); 
+					\n	end component;
+					\n							
+				#end
+			#end
+		  </Declaration>
+          <Implementation>
+			## aqui começa o comportamento da entidade ou implementação da classe
+			\n	
+			\nbegin
+			\n	
+			#if ($Class.getAttributesCount() > 0)
+				#foreach ($Attribute in $Class.getAttributes())
+					#set ($sz = 0)
+					#if ($Attribute.getDataType().getSize() > 1)
+						#set ($dtType = $Attribute.getDataType().getDataType())
+						#set ($sz = $Attribute.getDataType().getSize() - 1)
+					#else
+						#set ($dtType = $Attribute.getDataType())
+					#end
+					#foreach ($k in [0..$sz])
+						#if ($dtType.getRepresent() and $Attribute.Name != "")
+							#set($NewClass = $dtType.getRepresent())
+							#set($mapList = [])
+							#set ($add = $mapList.add($DERCSHelper.getListofRelatedMethods($NewClass)))
+							#set($tocEntry="")
+							\n
+							\n	${Attribute.Name}
+							#if ($sz > 0)
+								_${k}
+							#end
+							#set($lst = [])
+							#set($superLst = [])
+							: ${NewClass.Name} port map( 
+							\n		clock =&gt; clock,  
+							\n		reset =&gt; reset
+							#foreach($Message in $NewClass.getMethods())
+								#if ($Message.Name != $NewClass.Name)
+									#if ($Message.isGetSetMethod())
+										#set ($attr = $Message.getAssociatedAttribute())
+										#if ($attr.getDataType().getSize() > 1)
+											#set ($indtType = $attr.getDataType().getDataType())
+										#else
+											#set ($indtType = $attr.getDataType())
+										#end
+										#if(!$indtType.getRepresent())
+											#set ($printVar = true)
+											#foreach ($str in $lst)
+												#if ($str == $attr.Name)
+													#set ($printVar = false)
+												#end
+											#end
+											#if ($printVar)
+												#set ($add = $lst.add($attr.Name))
+												,
+												\n		${attr.Name}  =&gt;  ${Attribute.Name}${attr.Name}
+												#if ($sz > 0)
+													_${k}
+												#end
+											#end
+										#end
+									##Incluir sinais de enable para processos assincronos e sem parametros
+									#elseif (!$Message.getActiveMode() and $Message.getParametersCount() == 0)
+										#if ($DERCSHelper.isPublic($Message))
+											#set ($assyncBe = false)
+											#foreach ($allCls in $DERCSModel.getClasses())
+												#foreach ($MessageChk in $allCls.getMethods())
+													#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$Message))
+														#set ($assyncBe = true)
+													#end
+												#end
+											#end
+											#if($assyncBe)
+												,
+												\n		${Message.Name}Enable =&gt; ${Attribute.Name}${Message.Name}Enable
+												#if ($sz > 0)
+													_${k}
+												#end
+											#end
+										#end
+									#end
+								#end
+							#end
+							## verifica se a classe e uma generalizacao para incluir a super classe como componente - somente se for concreta
+							#if ($NewClass.SuperClass)
+								#set ($superClass = $NewClass.getSuperClass())
+								#if ($superClass.isAbstract())
+									#set($superLst = [])
+									#foreach($superMessage in $superClass.getMethods())
+										#if (!$superMessage.isAbstract() and $superMessage.Name != $superClass.Name)
+											#if ($superMessage.isGetSetMethod())
+												#set ($superAttr = $superMessage.getAssociatedAttribute())
+												#if ($superAttr.getDataType().getSize() > 1)
+													#set ($indtType = $superAttr.getDataType().getDataType())
+												#else
+													#set ($indtType = $superAttr.getDataType())
+												#end
+												#if(!$indtType.getRepresent())
+													#set ($printVar = true)
+													#foreach ($str in $superLst)
+														#if ($str == $superAttr.Name)
+															#set ($printVar = false)
+														#end
+													#end
+													#if ($printVar)
+														#set ($add = $superLst.add($superAttr.Name))
+														,
+														\n		${superAttr.Name}  =&gt;  ${NewClass.Name}${superAttr.Name}
+													#end
+												#end
+											##Incluir sinais de enable para processos assincronos e sem parametros
+											#elseif (!$superMessage.getActiveMode() and $superMessage.getParametersCount() == 0)
+												#if ($DERCSHelper.isPublic($superMessage))
+													#set ($assyncBe = false)
+													#foreach ($allCls in $DERCSModel.getClasses())
+														#foreach ($MessageChk in $allCls.getMethods())
+															#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$superMessage))
+																#set ($assyncBe = true)
+															#end
+														#end
+													#end
+													#if($assyncBe)
+														,
+														\n		${superMessage.Name}Enable =&gt; ${superClass.Name}${superMessage.Name}Enable
+													#end
+												#end
+											#end
+										#end
+									#end
+								#end
+							#end
+							## mensagens relacionas ao atributo classe
+							#set($lst = [])
+							#foreach($tocList in $mapList)
+								#foreach($tocEntry in $tocList)
+									#set ($attrPai = $tocEntry.get("idx"))
+									#if ($attrPai.getDataType().getSize())
+										#set ($szPai = $attrPai.getDataType().getSize() - 1)
+									#else
+										#set ($szPai = 0)
+									#end
+									#foreach ($lstMth in $tocEntry.values())
+										#foreach ($MsgRel in $lstMth)
+											#foreach ($j in [0..$szPai])
+												#set($lread = [])
+												#set($lwrite = [])
+												#if ($MsgRel.Name != $MsgRel.getOwnerClass().Name and $DERCSHelper.isPublic($MsgRel))
+													#if ($MsgRel.isGetSetMethod())
+														#foreach ($msgGer in $NewClass.getMethods())
+															#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $NewClass.Name)
+																#set($add = $lwrite.add($DERCSHelper.getListOfAttributesUsed($NewClass, $msgGer.Name, 1)))
+															#end
+														#end													
+														#set ($attr = $MsgRel.getAssociatedAttribute())
+														#set($cont = false)
+														#foreach ($desLista in $lwrite)
+															#if ($desLista.contains($attr))
+																#set($cont = true)
+															#end
+														#end
+														#if ($cont or $MsgRel.getReturnType() != "Void")
+															#if ($szPai > 0)
+																#set ($attrName = "${attrPai.Name}${attr.Name}_$j")
+															#else
+																#set ($attrName = "${attrPai.Name}${attr.Name}")
+															#end
+															#set ($attrClass = $attr.getOwnerClass())
+															#if ($attr.getDataType().getSize() > 1)
+																#set ($dtType = $attr.getDataType().getDataType())
+															#else
+																#set ($dtType = $attr.getDataType())
+															#end
+															#if (!$dtType.getRepresent())
+																#set ($print = true)
+																#foreach ($str in $lst)
+																	#if ($str == $attrName)
+																		#set ($print = false)
+																	#end
+																#end
+																#if ($print)
+																	#set ($add = $lst.add($attrName))
+																	,
+																	\n		${attrName}  =&gt;  ${Attribute.Name}${attrName}
+																	#if ($sz > 0)
+																		_${k}
+																	#end
+																#end
+															#end
+														#end
+													#end
+												#end
+											#end
+										#end
+									#end
+									## verifica se a classe e uma generalizacao para incluir a super classe como componente - somente se for concreta
+									#set ($superdtType = $attrPai.getDataType())
+									#if ($superdtType.getRepresent())
+										#set($repAttrPai = $superdtType.getRepresent())
+										#if ($repAttrPai.SuperClass)
+											#set ($superClass = $repAttrPai.getSuperClass())
+											#if ($superClass.isAbstract())
+												#foreach($superMessage in $superClass.getMethods())
+													#if (!$superMessage.isAbstract() and $superMessage.Name != $superClass.Name)
+														#if ($superMessage.isGetSetMethod())
+															#set ($superAttr = $superMessage.getAssociatedAttribute())
+															#if ($superAttr.getDataType().getSize() > 1)
+																#set ($indtType = $superAttr.getDataType().getDataType())
+															#else
+																#set ($indtType = $superAttr.getDataType())
+															#end
+															#set ($nmPai = "")
+															#if ($attrPai.getOwnerClass().Name != $NewClass.Name)
+																#set ($nmPai = $attrPai.getOwnerClass().Name)
+															#end
+															#if(!$indtType.getRepresent())
+																#if ($superClass.isAbstract())
+																	## nesse caso a super classe nao é componente, os seus sinais sao incorporados na classe filha
+																	#set ($superMesAttrName = "${nmPai}${repAttrPai.Name}${superAttr.Name}")
+																#else
+																	## nesse caso são inclusos os sinais para mapeamento dos componentes
+																	#set ($superMesAttrName = "${nmPai}${repAttrPai.Name}${superClass.Name}${superAttr.Name}")
+																#end															
+																#set ($printVar = true)
+																#foreach ($str in $superLst)
+																	#if ($str == $superMesAttrName)
+																		#set ($printVar = false)
+																	#end
+																#end
+																#if ($printVar)
+																	#set ($add = $superLst.add($superMesAttrName))
+																	,
+																	\n		$superMesAttrName  =&gt;  ${Attribute.Name}${nmPai}${repAttrPai.Name}${superAttr.Name}
+																#end
+															#end
+														##Incluir sinais de enable para processos assincronos e sem parametros
+														#elseif (!$superMessage.getActiveMode() and $superMessage.getParametersCount() == 0)
+															#if ($DERCSHelper.isPublic($superMessage))
+																#set ($assyncBe = false)
+																#foreach ($allCls in $DERCSModel.getClasses())
+																	#foreach ($MessageChk in $allCls.getMethods())
+																		#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$superMessage))
+																			#set ($assyncBe = true)
+																		#end
+																	#end
+																#end
+																#if($assyncBe)
+																	#if ($superClass.isAbstract())
+																		,
+																		\n		${superMessage.Name}Enable =&gt; ${Attribute.Name}${attrPai.getOwnerClass().Name}${repAttrPai.Name}${superMessage.Name}Enable
+																	#else
+																		,
+																		\n		${superMessage.Name}Enable =&gt; ${Attribute.Name}${attrPai.getOwnerClass().Name}${repAttrPai.Name}${superClass.Name}${superMessage.Name}Enable
+																	#end
+																#end
+															#end
+														#end
+													#end
+												#end
+											#end
+										#end
+									#end
+								#end
+							#end
+							\n 
+							\n	); 
+							\n
+						#end
+					#end
+				#end
+			#end
+			## verifica se a classe e uma generalizacao para incluir a super classe como componente - somente se for concreta
+			#if ($Class.SuperClass)
+				#set ($superClass = $Class.getSuperClass())
+				#if (!$superClass.isAbstract())
+					#set($lst = [])
+					: ${superClass.Name} port map( 
+					\n		clock =&gt; clock,  
+					\n		reset =&gt; reset
+					#foreach($superMessage in $superClass.getMethods())
+						#if (!$superMessage.isAbstract() and $superMessage.Name != $superClass.Name)
+							#if ($superMessage.isGetSetMethod())
+								#set ($attr = $superMessage.getAssociatedAttribute())
+								#if ($attr.getDataType().getSize() > 1)
+									#set ($indtType = $attr.getDataType().getDataType())
+								#else
+									#set ($indtType = $attr.getDataType())
+								#end
+								#if(!$indtType.getRepresent())
+									#set ($printVar = true)
+									#foreach ($str in $lst)
+										#if ($str == $attr.Name)
+											#set ($printVar = false)
+										#end
+									#end
+									#if ($printVar)
+										#set ($add = $lst.add($attr.Name))
+										,
+										\n		${attr.Name}  =&gt;  ${superClass.Name}${attr.Name}
+									#end
+								#end
+							##Incluir sinais de enable para processos assincronos e sem parametros
+							#elseif (!$superMessage.getActiveMode() and $superMessage.getParametersCount() == 0)
+								#if ($DERCSHelper.isPublic($superMessage))
+									#set ($assyncBe = false)
+									#foreach ($allCls in $DERCSModel.getClasses())
+										#foreach ($MessageChk in $allCls.getMethods())
+											#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$superMessage))
+												#set ($assyncBe = true)
+											#end
+										#end
+									#end
+									#if($assyncBe)
+										,
+										\n		${superMessage.Name}Enable =&gt; ${superClass.Name}${superMessage.Name}Enable
+									#end
+								#end
+							#end
+						#end
+					#end
+					\n 
+					\n	); 
+					\n
+				#end
+			#end
+          </Implementation>
+          
+          <Attributes>	
+			#set ($check = true)
+			#set ($sz = 0)
+			#if ($Attribute.getDataType().getSize() > 1)
+				#set ($dtType = $Attribute.getDataType().getDataType())
+				#set ($sz = $Attribute.getDataType().getSize() - 1)
+			#else
+				#set ($dtType = $Attribute.getDataType())
+			#end
+			#if (!$dtType.getRepresent())
+				## verifica se o atributo ja possui metodo get/set, ou seja, foi declarado como porta
+				#foreach($Message in $Class.getMethods())
+					#if ($Message.isGetSetMethod())
+						#set ($attr = $Message.getAssociatedAttribute())
+						#if ($Attribute.Name == $attr.Name)
+							#set ($check = false)
+						#end
+					#end
+				#end
+				#if ($check)
+					#if ($DERCSHelper.isPrivate($Attribute) and $DataTypeStr != "")
+						#if ($Attribute.getReadOnly())
+							\n	constant $Attribute.Name : $DataTypeStr
+						#else
+							\n	signal $Attribute.Name : $DataTypeStr
+						#end
+						#if ($Attribute.getDefaultValue() != "")
+							:= $Attribute.getDefaultValue()
+						#elseif( $Attribute.getDataType().toString() == "Integer")
+							:= 0
+						#elseif( $Attribute.getDataType().toString() == "Short")
+							:= 0
+						#elseif( $Attribute.getDataType().toString() == "Long")
+							:= 0
+						#elseif( $Attribute.getDataType().toString() == "Boolean" )
+							:= FALSE
+						#elseif( $Attribute.getDataType().toString() == "Byte" )
+							:= "00000000"
+						#elseif( $Attribute.getDataType().toString() == "Float" )
+							:= 0
+						#elseif( $Attribute.getDataType().toString() == "Char" )
+							:= '0'
+						#end
+						;
+					#end
+				#end
+			#elseif ( $Attribute.Name != "")
+				#foreach ($i in [0..$sz])
+					#set( $NewClass = $dtType.getRepresent() )
+					#set ($lstAt = [])
+					#foreach($MessageSec in $NewClass.getMethods())
+						#set($lwriteAt = [])
+						#if ($MessageSec.Name != $NewClass.Name)
+							#if ($MessageSec.isGetSetMethod())
+								#set ($attr = $MessageSec.getAssociatedAttribute())
+								#if ($sz > 0)
+									#set ($attrName = "${attr.Name}_$i")
+								#else
+									#set ($attrName = $attr.Name)
+								#end								
+								#if ($attr.getDataType().getSize() > 1)
+									#set ($dtType = $attr.getDataType().getDataType())
+								#else
+									#set ($dtType = $attr.getDataType())
+								#end
+								#if (!$dtType.getRepresent())
+									#foreach ($msgGer in $NewClass.getMethods())
+										#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $NewClass.Name)
+											#set($add = $lwriteAt.add($DERCSHelper.getListOfAttributesUsed($NewClass, $msgGer.Name, 1)))
+										#end
+									#end
+									#set ($attrprint = true)
+									#if ($MessageSec.getReturnType() == "Void")
+										#foreach ($str in $lstAt)
+											#if ($str == $attrName)
+												#set ($attrprint = false)
+											#end
+										#end
+										#foreach ($desLista in $lwriteAt)
+											#if ($desLista.contains($attr))
+												#set ($attrprint = false)
+											#end
+										#end
+										#foreach($MessageAttrChk in $NewClass.getMethods())
+											#if ($MessageAttrChk.isGetSetMethod() and $MessageAttrChk.getReturnType() != "Void" and $MessageAttrChk.getAssociatedAttribute().Name == $attr.Name)
+												#set ($attrprint = false)
+											#end
+										#end
+										#if ($attrprint)
+											#set ($add = $lstAt.add($attrName))
+											\n	
+											\n	signal ${Attribute.Name}${attrName} : $CodeGenerator.getDataTypeStr($dtType)
+											#if ($attr.getDefaultValue() != "")
+												:= $attr.getDefaultValue()
+											#elseif( $attr.getDataType().toString() == "Integer")
+												:= 0
+											#elseif( $attr.getDataType().toString() == "Short")
+												:= 0
+											#elseif( $attr.getDataType().toString() == "Long")
+												:= 0
+											#elseif( $attr.getDataType().toString() == "Boolean" )
+												:= FALSE
+											#elseif( $attr.getDataType().toString() == "Byte" )
+												:= "00000000";
+											#elseif( $attr.getDataType().toString() == "Float" )
+												:= 0
+											#elseif( $attr.getDataType().toString() == "Char" )
+												:= '0'
+											#end
+											;
+										#end
+									#end
+								#end
+							#elseif (!$MessageSec.getActiveMode() and $MessageSec.getParametersCount() == 0)
+								#if ($DERCSHelper.isPublic($MessageSec))
+									#set ($assyncBe = false)
+									#foreach ($allCls in $DERCSModel.getClasses())
+										#foreach ($MessageChk in $allCls.getMethods())
+											#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$MessageSec))
+												#set ($assyncBe = true)
+											#end
+										#end
+									#end
+									#if($assyncBe)
+										\n
+										\n	-- The Signal to control the process execution in ${Attribute.Name} component
+										\n	signal ${Attribute.Name}${MessageSec.Name}Enable
+										#if ($sz > 0)
+											_${i} 
+										#end
+										: BIT;
+									#end
+								#end
+							#end
+						#end
+					#end
+					## verifica se a classe possui uma super classe
+					#if ($NewClass.SuperClass)
+						#set ($superClass = $NewClass.getSuperClass())
+						#foreach ($superAttr in $superClass.getAttributes())
+							#set ($printSuper = true)
+							#foreach ($superMessage in $superClass.getMethods())
+								#if ($superMessage.Name != $superClass.Name and $superMessage.isGetSetMethod() and $superMessage.getAssociatedAttribute().Name == $superAttr.Name)
+									#if ($superMessage.getReturnType() != "Void")
+										#set ($printSuper = false)
+									#else
+										#set ($superWrite = [])
+										#foreach ($msgGer in $superClass.getMethods())
+											#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $superClass.Name)
+												#set($add = $superWrite.add($DERCSHelper.getListOfAttributesUsed($superClass, $msgGer.Name, 1)))
+											#end
+										#end
+										#foreach ($desLista in $superWrite)
+											#if ($desLista.contains($superAttr))
+												#set ($printSuper = false)
+											#end
+										#end
+									#end
+								#end
+							#end
+							#if ($printSuper)
+								#if ($DERCSHelper.isPrivate($superAttr))
+									#if ($superClass.isAbstract())
+										## nesse caso a super classe nao é componente, os seus sinais sao incorporados na classe filha
+										#set ($superAttrName = $superAttr.Name)
+									#else
+										## nesse caso são inclusos os sinais para mapeamento dos componentes
+										#set ($superAttrName = "${superClass.Name}${superAttr.Name}")
+									#end
+									#if ($superAttr.getReadOnly())
+										\n	constant $superAttrName : $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+									#else
+										\n	signal $superAttrName : $CodeGenerator.getDataTypeStr($superAttr.getDataType())
+									#end
+									#if ($superAttr.getDefaultValue() != "")
+										:= $superAttr.getDefaultValue()
+									#elseif( $superAttr.getDataType().toString() == "Integer")
+										:= 0
+									#elseif( $superAttr.getDataType().toString() == "Short")
+										:= 0
+									#elseif( $superAttr.getDataType().toString() == "Long")
+										:= 0
+									#elseif( $superAttr.getDataType().toString() == "Boolean" )
+										:= FALSE
+									#elseif( $superAttr.getDataType().toString() == "Byte" )
+										:= "00000000"
+									#elseif( $superAttr.getDataType().toString() == "Float" )
+										:= 0
+									#elseif( $superAttr.getDataType().toString() == "Char" )
+										:= '0'
+									#end
+									;
+								#end
+							#end
+						#end
+					#end
+					\n	
+					\n	
+					##mensagens relacionadas ao atributo
+					#set($mapListNew = [])
+					#set ($add = $mapListNew.add($DERCSHelper.getListofRelatedMethods($NewClass)))
+					#set($tocEntryNew="")
+					#set ($lstSuperNewClassMes = [])
+					#set ($lstNewClassMes = [])
+					#foreach($tocListNew in $mapListNew) 
+						#foreach($tocEntryNew in $tocListNew) 
+							#set ($attrPaiNew = $tocEntryNew.get("idx"))
+							#if ($attrPaiNew.getDataType().getSize())
+								#set ($szPai = $attrPaiNew.getDataType().getSize() - 1)
+							#else 
+								#set ($szPai = 0)
+							#end
+							#foreach ($lstMthNew in $tocEntryNew.values())
+								#foreach ($MsgRelNew in $lstMthNew)
+									#foreach ($j in [0..$szPai])
+										#if ($MsgRelNew.Name != $MsgRelNew.getOwnerClass().Name and $DERCSHelper.isPublic($MsgRelNew))
+											#if ($MsgRelNew.isGetSetMethod())
+												#set ($attrNew = $MsgRelNew.getAssociatedAttribute())
+												#set ($nmPaiNew = "")
+												#if ($attrPaiNew.Name != $Attribute.Name)
+													#set ($nmPaiNew = $attrPaiNew.Name)
+												#end
+												#set ($attrClass = $attrPaiNew.getDataType().getRepresent())
+												#if ($attrNew.getDataType().getSize() > 1)
+													#set ($dtTypeRel = $attrNew.getDataType().getDataType())
+												#else
+													#set ($dtTypeRel = $attrNew.getDataType())
+												#end
+												#if (!$dtTypeRel.getRepresent())
+													#if ($szPai > 0)
+														#set ($attrName = "${Attribute.Name}${nmPaiNew}${attrNew.Name}_$j")
+													#else
+														#set ($attrName = "${Attribute.Name}${nmPaiNew}${attrNew.Name}")
+													#end
+													#if ($sz > 0)
+														#set ($attrName = "${attrName}_$i")
+													#end
+													#set ($MesOkNew = true)
+													#foreach ($str in $lstNewClassMes)
+														#if ($str == $attrName)
+															#set ($MesOkNew = false)
+														#end
+													#end
+													#set ($checkNew = false)
+													#foreach($MessageTst in $attrClass.getMethods())
+														#if ($MessageTst.isGetSetMethod())
+															#if ($MessageTst.getAssociatedAttribute().Name == $attrNew.Name)
+																#set ($checkNew = true)
+															#end
+														#end
+													#end
+													## verificar se ha um get para o atributo da mensagem rel
+													#set ($chkMesGet = true)
+													#foreach($MessageTst in $attrPaiNew.getOwnerClass().getMethods())
+														#if ($MessageTst.isGetSetMethod())
+															#if ($MessageTst.getAssociatedAttribute().Name == $attrPaiNew.Name)
+																#set ($chkMesGet = false)
+															#end
+														#end
+													#end
+													#if ($checkNew and $chkMesGet and $MesOkNew)
+														#if ($DERCSHelper.isPrivate($attrNew))
+															#set ($add = $lstNewClassMes.add($attrName))
+															#if ($attrNew.getReadOnly())
+																\n	
+																\n	constant $attrName : $CodeGenerator.getDataTypeStr($attrNew.getDataType())
+															#else
+																\n	
+																\n	signal $attrName : $CodeGenerator.getDataTypeStr($attrNew.getDataType())
+															#end
+															#if ($attrNew.getDefaultValue() != "")
+																:= $attrNew.getDefaultValue()
+															#elseif( $attrNew.getDataType().toString() == "Integer")
+																:= 0
+															#elseif( $attrNew.getDataType().toString() == "Short")
+																:= 0
+															#elseif( $attrNew.getDataType().toString() == "Long")
+																:= 0
+															#elseif( $attrNew.getDataType().toString() == "Boolean" )
+																:= FALSE
+															#elseif( $attrNew.getDataType().toString() == "Byte" )
+																:= "00000000"
+															#elseif( $attrNew.getDataType().toString() == "Float" )
+																:= 0
+															#elseif( $attrNew.getDataType().toString() == "Char" )
+																:= '0'
+															#end
+															;
+														#end
+													#end
+												#end
+											#end
+										#end
+									#end
+								#end
+							#end
+							#set ($superdtTypeNew = $attrPaiNew.getDataType())
+							#if ($superdtTypeNew.getRepresent())
+								#set($repAttrPaiNew = $superdtTypeNew.getRepresent())
+								## verifica se a classe e uma generalizacao para incluir suas portas como sinais - para os que não possuem get/set
+								#if ($repAttrPaiNew.SuperClass)
+									#set ($superClass = $repAttrPaiNew.getSuperClass())
+									#set ($printSuper = true)
+									#foreach ($superAttrNew in $superClass.getAttributes())
+										#if ($superAttrNew.getDataType().getSize() > 1)
+											#set ($dtTypeSec = $superAttrNew.getDataType().getDataType())
+										#else
+											#set ($dtTypeSec = $superAttrNew.getDataType())
+										#end
+										#if (!$dtTypeSec.getRepresent())
+											#set ($nmPaiNew = "")
+											#if ($attrPaiNew.getOwnerClass().Name != $Attribute.getDataType().getRepresent().Name)
+												#set ($nmPaiNew = $attrPaiNew.getOwnerClass().Name)
+											#end										
+											#if ($superClass.isAbstract())
+												## nesse caso a super classe nao é componente, os seus sinais sao incorporados na classe filha
+												#set ($superMesAttrName = "${Attribute.Name}${nmPaiNew}${repAttrPaiNew.Name}${superAttrNew.Name}")
+											#else
+												## nesse caso são inclusos os sinais para mapeamento dos componentes
+												#set ($superMesAttrName = "${Attribute.Name}${nmPaiNew}${repAttrPaiNew.Name}${superClass.Name}${superAttrNew.Name}")
+											#end
+											#set ($MesOk = true)
+											#foreach ($str in $lstSuperNewClassMes)
+												#if ($str == $superMesAttrName)
+													#set ($MesOk = false)
+												#end
+											#end
+											#set ($check = false)
+											#foreach($MessageTst in $superClass.getMethods())
+												#if ($MessageTst.isGetSetMethod())
+													#if ($MessageTst.getAssociatedAttribute().Name == $superAttrNew.Name)
+														#set ($check = true)
+													#end
+												#end
+											#end
+											## verificar se ha um get para o atributo da mensagem rel
+											#set ($chkMesGet = true)
+											#foreach($MessageTst in $NewClass.getMethods())
+												#if ($MessageTst.isGetSetMethod())
+													#if ($MessageTst.getAssociatedAttribute().Name == $attrPaiNew.Name)
+														#set ($chkMesGet = false)
+													#end
+												#end
+											#end											
+											#if ($check and $chkMesGet and $MesOk)
+												#set ($add = $lstSuperNewClassMes.add($superMesAttrName))
+												#if ($DERCSHelper.isPrivate($superAttrNew))
+													#if ($superAttrNew.getReadOnly())
+														\n	
+														\n	constant ${superMesAttrName} : $CodeGenerator.getDataTypeStr($superAttrNew.getDataType())
+													#else
+														\n	
+														\n	signal ${superMesAttrName} : $CodeGenerator.getDataTypeStr($superAttrNew.getDataType())
+													#end
+													#if ($superAttrNew.getDefaultValue() != "")
+														:= $superAttrNew.getDefaultValue()
+													#elseif( $superAttrNew.getDataType().toString() == "Integer")
+														:= 0
+													#elseif( $superAttrNew.getDataType().toString() == "Short")
+														:= 0
+													#elseif( $superAttrNew.getDataType().toString() == "Long")
+														:= 0
+													#elseif( $superAttrNew.getDataType().toString() == "Boolean" )
+														:= FALSE
+													#elseif( $superAttrNew.getDataType().toString() == "Byte" )
+														:= "00000000"
+													#elseif( $superAttrNew.getDataType().toString() == "Float" )
+														:= 0
+													#elseif( $superAttrNew.getDataType().toString() == "Char" )
+														:= '0'
+													#end
+													;
+												#end
+											#end
+										#end
+									#end
+								#end
+							#end
+						#end
+					#end
+				#end
+			#end
+		  </Attributes>
+          
+          <Messages>
+            <Declaration>
+			#set($lreadMes = [])
+			#set($lwriteMes = [])
+			#if ($Message.Name != $Class.Name )
+				#if($Message.isGetSetMethod())
+					#foreach ($msgGer in $Class.getMethods())
+						#if (!$msgGer.isGetSetMethod() and $msgGer.Name != $Class.Name)
+							#set($add = $lreadMes.add($DERCSHelper.getListOfAttributesUsed($Class, $msgGer.Name, 0)))
+							#set($add = $lwriteMes.add($DERCSHelper.getListOfAttributesUsed($Class, $msgGer.Name, 1)))
+						#end
+					#end
+					#set ($attr = $Message.getAssociatedAttribute())
+					#if ($attr.getDataType().getSize() > 1)
+						#set ($dtType = $attr.getDataType().getDataType())
+					#else
+						#set ($dtType = $attr.getDataType())
+					#end
+					#if (!$dtType.getRepresent())
+						#if($Message.getReturnType() == "Void")
+							#set($newDirection = "IN")
+							#foreach ($desLista in $lwriteMes)
+								#if ($desLista.contains($attr))
+									#set($newDirection = "INOUT")
+								#end
+							#end
+							#foreach($MessageGet in $Class.getMethods())
+								#if($MessageGet.isGetSetMethod() and $MessageGet.getReturnType() != "Void" and $MessageGet.getAssociatedAttribute().Name == $attr.Name)
+									#set($newDirection = "INOUT")
+								#end
+							#end
+							;
+							\n	$attr.Name : $newDirection $CodeGenerator.getDataTypeStr($attr.getDataType())
+						#else
+							#set($newDirection = "OUT")
+							#foreach ($desLista in $lreadMes)
+								#if ($desLista.contains($attr))
+									#set($newDirection = "INOUT")
+								#end
+							#end
+							#set($print = true)
+							#foreach($MessageSet in $Class.getMethods())
+								#if($MessageSet.isGetSetMethod() and $MessageSet.getReturnType() == "Void" and $MessageSet.getAssociatedAttribute().Name == $attr.Name)
+									#set($print = false)
+								#end
+							#end
+							#if($print)
+								;
+								\n	$attr.Name : $newDirection $CodeGenerator.getDataTypeStr($attr.getDataType())
+							#end
+						#end
+					#end
+				#elseif ($DERCSHelper.isPublic($Message) and !$Message.getActiveMode() and $Message.getParametersCount() == 0)
+					#set ($assyncBe = false)
+					#foreach ($allCls in $DERCSModel.getClasses())
+						#foreach ($MessageChk in $allCls.getMethods())
+							#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$Message))
+								#set ($assyncBe = true)
+							#end
+						#end
+					#end
+					#if($assyncBe)
+						;
+						\n	${Message.Name}Enable : INOUT BIT
+					#end
+				#end
+			#end
+			</Declaration>
+            <Implementation>
+			#if ($Message.Name != $Class.Name)
+				#if (!$Message.isGetSetMethod())
+					#if ($Message.getActiveMode())
+						\n${Message.Name}: process 
+						#set ($par = false)
+						#set ($lstParam = [])
+						#foreach ($param in $Message.getParameters())
+							#set ($tstAttr = $Class.getAttribute($param.Name))
+							#set ($ls = true)
+							#if ($tstAttr)
+								#if ($tstAttr.getReadOnly())
+									#set ($ls = false)
+								#end
+							#end
+							#if ($ls)
+								#if ($velocityCount > 1), 
+								#else 
+								 (
+								 #set ($par = true)
+								#end
+								$param.Name 
+								#set ($add = $lstParam.add($param.Name))
+							#end
+						#end
+						#set($lread = $DERCSHelper.getListOfAttributesUsed($Class, $Message.Name, 0))
+						#set($lwrite = $DERCSHelper.getListOfAttributesUsed($Class, $Message.Name, 1))
+						#foreach($val in $lread)
+							#set ($printPar = true)
+							#foreach ($s in $lwrite)
+								#if ($s.contains($val.Name))
+									#set ($printPar = false)
+								#end
+							#end
+							#if (!$lstParam.contains($val.Name) and $printPar)
+								#set ($tstAttr = $Class.getAttribute($val.Name))
+								#set ($ls = true)
+								#if ($tstAttr)
+									#if ($tstAttr.getReadOnly())
+										#set ($ls = false)
+									#end
+								#end
+								#if ($ls)
+									#if (($velocityCount > 1) or ($Message.getParametersCount() > 0 ) or ($par == true))
+										, 
+									#else
+										(
+										#set ($par = true)
+									#end
+									$val.Name 
+								#end
+							#end
+						#end
+						#if ($par)
+							)
+						#end
+						\n	
+						\n$CodeGenerator.getVariablesDeclaration(1)
+						\n
+						#set ($bhlist = $DERCSHelper.getListMethods($Message.getTriggeredBehavior()))
+						#foreach ($bh in $bhlist)
+							#if (!$bh.RelatedMethod.isGetSetMethod() and $bh.getMessageSort() == "SYNCHCALL")
+								\n$CodeGenerator.getVariablesDeclaration($bh.RelatedMethod.getTriggeredBehavior(),1)
+								\n
+							#end
+						#end
+						\n$Options.BlockStart
+						\n
+						\n$CodeGenerator.getActionsCode(1) 
+						\n	
+						\n$Options.BlockEnd process ${Message.Name}; 
+						\n 						
+					#else
+						#set ($assyncBe = false)
+						#foreach ($allCls in $DERCSModel.getClasses())
+							#foreach ($MessageChk in $allCls.getMethods())
+								#if ($DERCSHelper.hasAsynchrnousBehavior($allCls,$MessageChk.Name,$Message))
+									#set ($assyncBe = true)
+								#end
+							#end
+						#end
+						##se a mensagem possuir um parâmetro,  sera sensivel a ele podendo executar a uma alteracao
+						#if (!$assyncBe and $Message.getParametersCount() > 0)
+							#foreach( $param in $Message.Parameters )
+								#foreach ($msgChk in $Class.getMethods())
+									#if ($msgChk.isGetSetMethod() and $msgChk.getReturnType() == "Void" and $msgChk.getAssociatedAttribute().Name == $param.Name)
+										#set ($assyncBe = true)
+									#end
+								#end
+							#end
+						#end
+						#if($assyncBe)
+							\n${Message.Name}: process( 
+							#if ($Message.getParametersCount() == 0)
+								${Message.Name}Enable, 
+								reset 
+							#end
+							#foreach( $param in $Message.Parameters )
+								#if($CodeGenerator.getDataTypeStr($param.getDataType()) != "")
+									#if($param.getParameterKind() == "IN" or $param.getParameterKind() == "INOUT")
+										#if ($velocityCount > 1), #end
+										$param.Name 
+									#end
+								#end
+							#end
+							)
+							\n	
+							\n$CodeGenerator.getVariablesDeclaration(1)
+							\n$Options.BlockStart
+							\n	
+							#if ($Message.getParametersCount() == 0)
+								\n
+								\n	if (reset='1') then
+								\n		-- signals initialization
+								\n
+								\n	elsif (${Message.Name}Enable'EVENT and ${Message.Name}Enable = '1') then 
+								\n
+							#end
+							\n$CodeGenerator.getActionsCode(1)
+							\n	
+							#if ($Message.getParametersCount() == 0)
+								\n	end if; 
+							#end
+							\n	
+							\n$Options.BlockEnd process ${Message.Name};
+							\n 
+						#end
+					#end
+				#end 
+			#end 
+			</Implementation>
+          </Messages>
+        </Classes>
+        
+        
+        <!-- Mapping rules for BEHAVIOR, i.e. sequence of actions -->
+        <Behavior>
+          <VariableDeclaration>
+			#if ($DataTypeStr != "")
+				\nvariable $Variable.Name : $DataTypeStr 
+				#if ($Variable.getDefaultValue() != "")
+					:= $Variable.getDefaultValue()
+				#elseif( $Variable.getDataType().toString() == "Integer")
+					:= 0
+				#elseif( $Variable.getDataType().toString() == "Short")
+					:= 0
+				#elseif( $Variable.getDataType().toString() == "Long")
+					:= 0
+				#elseif( $Variable.getDataType().toString() == "Boolean" )
+					:= FALSE
+				#elseif( $Variable.getDataType().toString() == "Byte" )
+					:= "00000000"
+				#elseif( $Variable.getDataType().toString() == "Float" )
+					:= 0
+				#elseif( $Variable.getDataType().toString() == "Char" )
+					:= '0'
+				#end
+				;
+			#end
+          </VariableDeclaration>
+		  
+          <Branch>
+				#set( $ident = $IdentationLevel)
+				#if ( !$altBehav )
+					\nif ( $Branch.EnterCondition ) then 
+				#else
+					#if ($Branch.EnterCondition != " ")
+						\nelsif ( $Branch.EnterCondition ) then
+					#else
+						\nelse
+					#end
+					#set ($altBehav = false)
+					#set( $ident = $ident + 2 )
+				#end
+				\n$CodeGenerator.getVariablesDeclaration($ident)
+				\n$CodeGenerator.getActionsCode($ident) 
+				#set( $ident = $ident - 2)
+				#if ( $Branch.hasAlternativeBehavior() )
+				  #set ($altBehav = true)			  
+				  \n$CodeGenerator.getVariablesDeclaration($Branch.AlternativeBehavior, $ident)
+				  \n$CodeGenerator.getActionsCode($Branch.AlternativeBehavior, $ident) 
+				  #set( $ident = $ident + 2 )
+				#else
+				  \n
+				  \nend if;
+				  #set ($altBehav = false)
+				  #set( $ident = $ident - 2 )
+				#end
+          </Branch>
+          
+          <Loop>
+            #if ($Loop.NumberOfRepetitions > 0)
+				\nFOR $IndexVariableName IN 0 TO $Loop.NumberOfRepetitions LOOP               
+            #elseif ($Loop.EnterCondition)
+				\nWHILE ${Loop.EnterCondition} LOOP
+			#end
+            \n$CodeGenerator.getVariablesDeclaration(1)
+            \n$CodeGenerator.getActionsCode(1)
+			#if ($Loop.ExitCondition)
+				\nWHEN ${Loop.ExitCondition} => EXIT;
+			#end
+			\nEND LOOP;
+          </Loop>
+          
+          <Assignment>
+            #if ($Action.isVariableAssignment())
+              \n$Action.Variable.Name := 
+            #else
+				#if ($Action.Object)
+					\n${Action.Object.Name}.${Action.Attribute.Name} 
+				#else
+					\n${Action.Attribute.Name} 
+				#end
+            &lt;= 
+		    #end
+            #if ($Action.isAssignmentOfValue())
+				${Action.Value};
+            #else
+				$CodeGenerator.getActionCode($Action.Action)
+            #end
+          </Assignment>
+          
+          <Object>
+            <Creation>
+            </Creation>
+           
+            <Destruction></Destruction>
+          </Object>
+          
+          <Expression>
+            #if ( $DERCSHelper.isNormalMethod($Message) )
+              ${Action.Expression}
+            #else
+              ${Action.Expression}
+            #end
+            ;
+          </Expression>
+          
+          <Return></Return>
+          
+          <StateChange></StateChange>
+          
+          <SendMessage>
+            <ToLocal>
+              <Software>
+				#if ($Action.RelatedMethod.isGetSetMethod())
+					#set ($actAttr = $Action.RelatedMethod.getAssociatedAttribute())
+					#set ($objName = $Action.getToObject().Name)
+					#set ($mult = false)
+					#if (($objName.indexOf("[") > -1) || ($objName.indexOf("]") > -1))
+						#set ($ini = $objName.indexOf("[") + 1)
+						#set ($index = $objName.substring($ini,$objName.indexOf("]")))
+						#set ($mult = true)
+					#end
+					#if ($mult)
+						\n${objName.substring(0,$objName.indexOf("["))}${actAttr.getName()}_${index} 
+					#else
+						\n${Action.getToObject().Name}${actAttr.getName()} 
+					#end
+					#if ($Action.RelatedMethod.getReturnType() == "Void")
+						&lt;= 
+					#end
+					#if ($Action.ParametersValuesCount > 0)
+					  #foreach($param in $Action.getParametersValues())
+						#if ($velocityCount > 1), #end
+						#set( $x =  $velocityCount - 1)
+						#if ($Action.isParameterValue($x))
+							${param}
+						#else
+						  ${param.Name}
+						#end
+					  #end
+					#end
+					;
+				#else
+					#if($DERCSHelper.isSynchronous($Action)) 
+						#set ($temp = $IdentationLevel)
+						\n
+						\n-- Synchronous process ${Action.RelatedMethod.Name} from ${Action.RelatedMethod.OwnerClass.Name} component 
+						\n$CodeGenerator.getActionsCode($Action.RelatedMethod.getTriggeredBehavior(),$IdentationLevel) 
+						\n-- End of synchronous process
+						#set ($IdentationLevel = $temp)
+						\n	
+						\n
+					#else
+						#if ($Action.ParametersValuesCount > 0)
+							#foreach($param in $Action.getParametersValues())
+								#if ($velocityCount > 1), #end
+								#set( $x =  $velocityCount - 1)
+								#set ($actAttr = $Action.RelatedMethod.getParameter($x))
+								#set ($objName = $Action.getToObject().Name)
+								#set ($mult = false)
+								#if (($objName.indexOf("[") > -1) || ($objName.indexOf("]") > -1))
+									#set ($ini = $objName.indexOf("[") + 1)
+									#set ($index = $objName.substring($ini,$objName.indexOf("]")))
+									#set ($mult = true)
+								#end
+								#if ($Action.RelatedMethod.OwnerClass.Name == $Class.Name)
+									#if ($mult)
+										\n${objName.substring(0,$objName.indexOf("["))}${actAttr.getName()}_${index} 
+									#else
+										\n${Action.getToObject().Name}${actAttr.getName()} 
+									#end
+								#else
+									#if ($mult))
+										\n${Action.getToObject().Name}${objName.substring(0,$objName.indexOf("["))}${actAttr.getName()}_${index} 
+									#else
+										\n${Action.getToObject().Name}${Action.getToObject().Name}${actAttr.getName()} 
+									#end
+								#end
+								#if ($Action.RelatedMethod.getReturnType() == "Void")
+									&lt;= 
+								#end
+								#if ($Action.isParameterValue($x))
+								  ${param}
+								#else
+								  ${param.Name}
+								#end
+							#end
+							;
+						#else
+							#set ($objName = $Action.getToObject().Name)
+							#set ($mult = false)
+							#if (($objName.indexOf("[") > -1) || ($objName.indexOf("]") > -1))
+								#set ($ini = $objName.indexOf("[") + 1)
+								#set ($index = $objName.substring($ini,$objName.indexOf("]")))
+								#set ($mult = true)
+							#end
+							#if ($Action.RelatedMethod.OwnerClass.Name == $Class.Name)
+								#if ($mult)
+									\n	
+									\n${objName.substring(0,$objName.indexOf("["))}${Action.RelatedMethod.Name}Enable_${index}  &lt;= '1';
+								#else
+									\n	
+									\n${Action.RelatedMethod.Name}Enable &lt;= '1';
+								#end
+							#else
+								#if ($mult)
+									\n	
+									\n${objName.substring(0,$objName.indexOf("["))}${Action.RelatedMethod.Name}Enable_${index}  &lt;= '1';
+								#else
+									\n	
+									\n${Action.getToObject().Name}${Action.RelatedMethod.Name}Enable &lt;= '1';
+								#end
+							#end
+						#end
+					#end
+				#end
+              </Software>
+              <Hardware></Hardware>
+            </ToLocal>
+            
+            <ToRemote>
+              <Software>
+              </Software>
+              <Hardware></Hardware>
+            </ToRemote>
+          </SendMessage>
+          
+          <InsertArrayElement>
+          </InsertArrayElement>
+          
+          <RemoveArrayElement>
+          </RemoveArrayElement>
+          
+          <GetArrayElement>
+          </GetArrayElement>
+          
+          <SetArrayElement>
+          </SetArrayElement>
+          
+          <ArrayLength>
+          </ArrayLength>
+        </Behavior>
+        
+        
+        <!-- Mapping rules for INTERRUPT HANDLING code -->
+        <InterruptHandling>
+        </InterruptHandling>
+        
+        
+        <!-- Mapping rules for DERAF ASPECTS -->
+        <Aspects>
+		
+          <!--**************************************************************-->
+          <!--*                Timing Package                              *-->
+          <!--**************************************************************-->
+          <TimingAttributes>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Deadline" Order="3" ModelLevel="no">
+              </Structural>
+              <Structural Name="Priority" Order="3">
+              </Structural>
+              <Structural Name="WCET" Order="3" ModelLevel="no">
+              </Structural>
+              <Structural Name="ModityClassStructure" Order="0" ModelLevel="yes">
+              </Structural>
+              <Structural Name="ModifyConstructor" Order="0" ModelLevel="yes">
+              </Structural>
+              <Behavioral Name="SetTimingAttributes" Order="2" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="AdaptObjectConstruction" Order="0" ModelLevel="yes">
+              </Behavioral>
+              <Structural Name="AddAccessMethods" Order="3" ModelLevel="no">
+              </Structural>
+              <Structural Name="StartTime" Order="3" ModelLevel="no">
+              </Structural>
+              <Structural Name="EndTime" Order="3" ModelLevel="no">
+              </Structural>
+            </Adaptations>
+          </TimingAttributes>
+          
+          <PeriodicTiming>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Period" Order="0" ModelLevel="yes">
+				#foreach ($Message in $Class.getMethods())
+					#if ($Message.getActiveMode())
+						#set ($attr = $Class.addAttribute("${Message.Name}Threshold",$DERCSFactory.newLong(true),$DERCSFactory.getPrivate(),false,$DERCSHelper.strTimeToInteger( $Crosscutting.getValueOf("Period"), "ns" ),true))
+						#set ($attr = $Class.addAttribute("${Message.Name}Clockdiv",$DERCSFactory.newChar(),$DERCSFactory.getPrivate(),false,"",false))
+						$Message.addParameter("${Message.Name}Clockdiv", $DERCSFactory.newChar(), $DERCSFactory.getParameterIn())
+						$Message.addParameter("reset", $DERCSFactory.newChar(), $DERCSFactory.getParameterIn())
+					#end
+				#end
+			  </Structural>
+              <Structural Name="ModifyConstructor" Order="0" ModelLevel="no">
+				\n	
+				\n	component clockDiv IS
+				\n		port ( clock : in STD_LOGIC;
+				\n		   	   threshold: in integer range -2147483647 TO +2147483647;
+				\n		       clockdiv : out BIT); 
+				\n	end component;
+				\n	
+              </Structural>
+              <Structural Name="SetupPeriod" Order="2" ModelLevel="no">
+				#foreach ($Message in $Class.getMethods())
+					#if ($Message.getActiveMode())
+						\n	
+						\n	${Message.Name}Divider: clockDiv port map( 
+						\n		clock =&gt; clock,
+						\n		threshold =&gt; ${Message.Name}Threshold,
+						\n		clockdiv =&gt; ${Message.Name}Clockdiv
+						\n		);
+						\n	
+					#end
+				#end
+              </Structural>
+              <Behavioral Name="FrequencyControlStart" Order="1" ModelLevel="no">
+					\n	if (reset = '1') then
+					\n	 -- variables initialization
+					\n	elsif (${Message.Name}Clockdiv'EVENT and ${Message.Name}Clockdiv='1') then
+              </Behavioral>
+              <Behavioral Name="FrequencyControlEnd" Order="2" ModelLevel="no">
+					\n	end if;
+					\n	
+              </Behavioral>
+              <Behavioral Name="LoopMechanism" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="AdaptObjectConstruction" Order="0" ModelLevel="yes">				
+              </Behavioral>
+            </Adaptations>
+          </PeriodicTiming>
+
+		  <COPMonitoring>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="watchdog" Order="0" ModelLevel="yes">
+				#set ($attr = $Class.addAttribute("watchdogSignal",$DERCSFactory.newChar(),$DERCSFactory.getPrivate(),false,"",false))
+				#set ($attrReset = $Class.addAttribute("watchdogReset",$DERCSFactory.newChar(),$DERCSFactory.getPrivate(),false,"",false))
+				#set ($mthAopGet = $DERCSHelper.addGetMethod($Class,$attrReset))
+				#set ($mthAopSet = $DERCSHelper.addSetMethod($Class,$attrReset))
+				#set ($attr = $Class.addAttribute("watchdogTimer",$DERCSFactory.newLong(true),$DERCSFactory.getPrivate(),false,$DERCSHelper.strTimeToInteger( $Crosscutting.getValueOf("Deadline"), "ns" ),true))
+              </Structural>
+              <Structural Name="modifyConstructor" Order="2" ModelLevel="no">
+				\n	component watchdog IS
+				\n		port ( 	clock : in STD_LOGIC;			
+				\n			watchdogSignal: in BIT;
+				\n			watchdogTimer: in INTEGER RANGE -2147483647 TO +2147483647;
+				\n			watchdogReset: out BIT); 
+				\n	end component;
+				\n	
+              </Structural>	
+              <Structural Name="setupWatchdog" Order="3" ModelLevel="no">
+					\n	
+					\n	${Class.Name}Watchdog: watchdog port map( 
+					\n		clock =&gt; clock,
+					\n		watchdogSignal =&gt; watchdogSignal,
+					\n		watchdogTimer =&gt; watchdogTimer,
+					\n		watchdogReset =&gt; watchdogReset
+					\n		);
+					\n
+              </Structural>		
+              <Structural Name="resetWatchdog" Order="4" ModelLevel="no">
+					\n	
+					\n	resetWatchdog:process (clock)
+					\n		variable count: integer := 0;
+					\n	begin
+					\n
+					\n		if (clock'EVENT and clock='1') then
+					\n			if (count &lt; watchdogTimer) then
+					\n				count := count + 1;
+					\n				watchdogSignal &lt;= '1';
+					\n			else
+					\n				count := 0;
+					\n				watchdogSignal &lt;= '0';
+					\n			end if;
+					\n		end if;					
+					\n	end process resetWatchdog;
+					\n
+              </Structural>	
+              <Structural Name="setupHandler" Order="0" ModelLevel="yes">
+				#set ($n = $Class.getAttributesCount() - 1) 
+				#foreach ($i in [0..$n]) 
+					#set ($attrWt = $Class.getAttribute($i))
+					#if ($attrWt.getDataType().getRepresent())
+						#set ($attWCls = $attrWt.getDataType().getRepresent())
+						#if ($attWCls.getTpResource() == 1)					  
+							#set ($attrRes = $Class.addAttribute("${attrWt.Name}reset",$DERCSFactory.newChar(),$DERCSFactory.getPrivate(),false,"'0'",false))
+						#end
+					#end
+				#end
+				#foreach ($Message in $Class.getMethods())
+					#if (!$Message.isGetSetMethod() and $Message.Name != $Class.Name)
+						#set ($n = $Class.getAttributesCount() - 1) 
+						#foreach ($i in [0..$n]) 
+							#set ($attrWt = $Class.getAttribute($i))
+							#if ($attrWt.getDataType().getRepresent())
+								#set ($attWCls = $attrWt.getDataType().getRepresent())
+								#if ($attWCls.getTpResource() == 1)					
+									#set($add = $Message.addParameter("${attrWt.Name}watchdogReset", $DERCSFactory.newChar(), $DERCSFactory.getParameterIn()))
+								#end
+							#end
+						#end
+					#end
+				#end
+              </Structural>				  
+			  <Structural Name="interruptionHandler" Order="5" ModelLevel="no">
+				#foreach ($attrWt in $Class.getAttributes())
+					#if ($attrWt.getDataType().getRepresent())
+						#set ($attWCls = $attrWt.getDataType().getRepresent())
+						#if ($attWCls.getTpResource() == 1)
+							\n	
+							\n	handlingInterruption${attrWt.Name}:process (${attrWt.Name}watchdogReset)
+							\n	begin
+							\n		if (${attrWt.Name}watchdogReset'EVENT and ${attrWt.Name}watchdogReset='1') then
+							\n		-- reset the state of signals controled by architecture
+							\n			${attrWt.Name}reset &lt;= '1';
+							\n		end if;					
+							\n	end process handlingInterruption${attrWt.Name};
+							\n						
+						#end
+					#end
+				#end
+              </Structural>
+              <Behavioral Name="instrumentationCodeStart" Order="0" ModelLevel="no">
+				#if ($Action.getToObject())
+					\nif (${Action.getToObject().Name}watchdogReset = '0') then
+					\n
+				#end
+              </Behavioral>
+              <Behavioral Name="instrumentationCodeEnd" Order="6" ModelLevel="no">
+				#if ($Action.getToObject())
+					\nend if;
+					\n
+				#end
+              </Behavioral>			  
+            </Adaptations>
+          </COPMonitoring>
+		  
+          <SchedulingSupport>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Scheduler" Order="0" ModelLevel="no">
+              </Structural>
+              <Behavioral Name="SetupConcurrentActivities" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </SchedulingSupport>
+          
+          <TimeBoundedActivity>
+            <Adaptations>
+              <Structural Name="TimeCountInfrastructure" Order="0" ModelLevel="no">
+              </Structural>
+              <Behavioral Name="StartCounting" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="StopCounting" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </TimeBoundedActivity>
+          
+          <!--**************************************************************-->
+          <!--*                Precision Package                           *-->
+          <!--**************************************************************-->
+          <Jitter>
+            <Adaptations>
+              <Behavioral Name="StartTime" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="VerifyToleratedJitter" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </Jitter>
+          
+          <ToleratedDelay>
+            <Adaptations>
+              <Behavioral Name="StartTime" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="VerifyToleratedDelay" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </ToleratedDelay>
+          
+          <ClockDrift>
+            <Adaptations>
+              <Behavioral Name="CheckClockDrift" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </ClockDrift>
+          
+          <DataFreshness>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="ValidityInformation" Order="0" ModelLevel="yes">
+				#set ($n = $Class.getAttributesCount() - 1) 
+				#foreach ($i in [0..$n]) 
+					#set ($attrAOPpar = $Class.getAttribute($i))
+					#if (!$attrAOPpar.getReadOnly())
+						#set ($chk = false)
+						#foreach ($mesAOP in $Class.getMethods())
+							#if ($mesAOP.isGetSetMethod() and $mesAOP.getReturnType() != "Void" and $mesAOP.getAssociatedAttribute().Name ==  $attrAOPpar.Name)
+								#set ($chk = true)
+							#end
+						#end
+						#if ($chk)		
+							#set ($attr = $Class.addAttribute("temporalDeadLine${attrAOPpar.Name}",$DERCSFactory.newLong(true),$DERCSFactory.getPrivate(),false,$DERCSHelper.strTimeToInteger( $Crosscutting.getValueOf("Validity"), "ns" ),true)) 
+							#set ($attrAOPName = "isFresh${attrAOPpar.Name}")							
+							#set ($attrAOPparNew = $Class.addAttribute("old${attrAOPpar.Name}",$attrAOPpar.getDataType(),$attrAOPpar.getVisibility(),false,$attrAOPpar.getDefaultValue(),$attrAOPpar.getReadOnly())); 
+							#set ($attrval = $Class.addAttribute($attrAOPName,$DERCSFactory.newChar(),$DERCSFactory.getPrivate(),false,"'0'",false))
+							#set ($mthAop = $DERCSHelper.addGetMethod($Class,$attrval));
+							#set ($chkSet = true)
+							#foreach ($mesAOP in $Class.getMethods())
+								#if ($mesAOP.isGetSetMethod() and $mesAOP.getReturnType() == "Void" and $mesAOP.getAssociatedAttribute().Name ==  $attrAOPpar.Name)
+									#set ($chkSet = false)
+								#end
+							#end
+							#if ($chkSet)
+								#set ($mthAop = $DERCSHelper.addSetMethod($Class,$attrAOPpar));
+							#end
+						#end
+					#end
+				#end
+              </Structural>
+              <Structural Name="SetupValidity" Order="0" ModelLevel="no">
+					\n	
+					\n	setupValidity:process (clock)
+					#foreach ($attrAOP in $Class.getAttributes())
+						#if (!$attrAOP.getReadOnly())
+							#set ($chk = false)
+							#foreach ($mesAOP in $Class.getMethods())
+								#if ($mesAOP.isGetSetMethod() and $mesAOP.Name != $Class.Name and $mesAOP.getAssociatedAttribute().Name ==  $attrAOP.Name)
+									#set ($chk = true)
+								#end
+							#end
+							#if ($chk and !$attrAOP.Name.startsWith("isFresh"))
+								\n	
+								\n		variable countValidity${attrAOP.Name}: integer := 0;
+							#end
+						#end
+					#end
+					\n	
+					\n	begin
+					\n
+					\n		if (clock'EVENT and clock='1') then
+					\n	
+					#foreach ($attrAOP in $Class.getAttributes())
+						#if (!$attrAOP.getReadOnly())
+							#set ($chk = false)
+							#foreach ($mesAOP in $Class.getMethods())
+								#if ($mesAOP.isGetSetMethod() and $mesAOP.Name != $Class.Name and $mesAOP.getAssociatedAttribute().Name ==  $attrAOP.Name)
+									#set ($chk = true)
+								#end
+							#end
+							#if ($chk and !$attrAOP.Name.startsWith("isFresh") and $attrAOP.Name != "watchdogReset")
+								\n	
+								\n			if (old${attrAOP.Name} /= $attrAOP.Name) then
+								\n				isFresh${attrAOP.Name} &lt;= '0';
+								\n				countValidity${attrAOP.Name} := 0;
+								\n				old${attrAOP.Name} &lt;=  $attrAOP.Name;
+								\n			else
+								\n				if (countValidity${attrAOP.Name} &lt; temporalDeadLine${attrAOP.Name}) then
+								\n					countValidity${attrAOP.Name} := countValidity${attrAOP.Name} + 1;
+								\n				else
+								\n					countValidity${attrAOP.Name} := 0;
+								\n					isFresh${attrAOP.Name} &lt;= '1';
+								\n				end if;
+								\n			end if;
+								\n	
+							#end
+						#end
+					#end
+					\n	
+					\n		end if;					
+					\n	end process setupValidity;
+					\n			  
+              </Structural>
+              <Behavioral Name="VerifyFreshnessStart" Order="0" ModelLevel="no">
+			    #if ($Action.getAction().getToObject())
+					\n
+					\nif (${Action.getAction().getToObject().getName()}isFresh${Action.getAction().RelatedMethod.getAssociatedAttribute().Name} = '0') then
+					\n
+				#end
+              </Behavioral>
+              <Behavioral Name="VerifyFreshnessEnd" Order="0" ModelLevel="no">	
+			   #if ($Action.getAction().getToObject())
+				\nend if;
+				\n
+			   #end
+              </Behavioral>			  
+              <Behavioral Name="UpdateFreshness" Order="0" ModelLevel="no">			  
+              </Behavioral>
+            </Adaptations>
+          </DataFreshness>
+          
+          <!--**************************************************************-->
+          <!--*                Synchronization Package                     *-->
+          <!--**************************************************************-->
+          <ConcurrentAccessControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="ConcurrencyControlMechanism" Order="0" ModelLevel="no">
+              </Structural>
+              <Behavioral Name="AcquireAccess" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="ReleaseAccess" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </ConcurrentAccessControl>
+          
+          <MessageSynchronization>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="WaitingMechanism" Order="0" ModelLevel="no">
+              </Structural>
+              <Behavioral Name="WaitForAcknowledge" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </MessageSynchronization>
+          
+          <!--**************************************************************-->
+          <!--*                Communication Package                       *-->
+          <!--**************************************************************-->
+          <MessageAck>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="AcknowledgmentMechanism" Order="0" ModelLevel="no">
+              </Structural>
+              <Behavioral Name="SignalAcknowledgmentMechanism" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="SendAcknowledgment" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </MessageAck>
+          
+          <MessageIntegrity>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Behavioral Name="GenerateIntegrityInfo" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="VerifyIntegrityInfo" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </MessageIntegrity>
+          
+          <MessageCompression>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Behavioral Name="Compress" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="Decompress" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </MessageCompression>
+          
+          <!--**************************************************************-->
+          <!--*                TaskAllocation Package                      *-->
+          <!--**************************************************************-->
+          <NodeStatusRetrieval>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Alive" Order="0" ModelLevel="no">
+              </Structural>
+              <Behavioral Name="ProcessingLoad" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="MessageThroughput" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </NodeStatusRetrieval>
+          
+          <TaskMigration>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Behavioral Name="Migrate" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Structural Name="MigrationMechanism" Order="0" ModelLevel="no">
+              </Structural>
+            </Adaptations>
+          </TaskMigration>
+          
+          <!--**************************************************************-->
+          <!--*                    Embedded Package                        *-->
+          <!--**************************************************************-->
+          <HwAreaMonitoring>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="HwAreMonitoringMechanism" Order="0" ModelLevel="no">
+              </Structural>
+              <Behavioral Name="IncreaseAreaUsage" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="DecreaseAreaUsage" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </HwAreaMonitoring>
+          
+          <HwAreaControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="HwAreaControlPolicy" Order="0" ModelLevel="no">
+              </Structural>
+            </Adaptations>
+          </HwAreaControl>
+          
+          <EnergyMonitoring>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="EnergyMonitoringMechanism" Order="0" ModelLevel="no">
+              </Structural>
+              <Behavioral Name="StartingEnergyAmount" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="CalculateEnergyConsumption" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </EnergyMonitoring>
+          
+          <EnergyControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="EnergyConsumptionPolicy" Order="0" ModelLevel="no">
+              </Structural>
+            </Adaptations>
+          </EnergyControl>
+		  
+          
+          <MemoryUsageMonitoring>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="MemoryMonitoringMechanism" Order="0" ModelLevel="no">
+              </Structural>
+              <Behavioral Name="IncreaseMemoryUsage" Order="0" ModelLevel="no">
+              </Behavioral>
+              <Behavioral Name="DecreaseMemoryUsage" Order="0" ModelLevel="no">
+              </Behavioral>
+            </Adaptations>
+          </MemoryUsageMonitoring>
+          
+          <MemoryControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="MemoryUsageControlPolicy" Order="0" ModelLevel="no">
+              </Structural>
+            </Adaptations>
+          </MemoryControl>	  
+        </Aspects>
+      </Software>
+      
+      <Hardware></Hardware>
+    </Application>
+    
+    
+    <!-- Mapping rules for PLATFORM CODE -->
+	<PlatformConfiguration>
+		<Software>
+			<SourceOptions OutputDirectory="platform"></SourceOptions>
+			<Files xmlns:xi="http://www.w3.org/2001/XInclude">
+				<xi:include href=".\PeriodicTiming.xml"/>
+				<xi:include href=".\Watchdog.xml"/>
+			</Files>	  
+		</Software>
+		<Hardware></Hardware>
+	</PlatformConfiguration>
+  </VHDL>
+</Platforms>

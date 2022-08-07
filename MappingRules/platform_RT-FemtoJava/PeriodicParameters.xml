@@ -1,0 +1,53 @@
+<File Name="PeriodicParameters.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="SchedulingSupport, PeriodicTiming">
+  <Fragment>
+	package saito.sashimi.realtime;
+	public class PeriodicParameters extends ReleaseParameters {
+	
+	private HighResolutionTime m_hrtimeStart;
+	private HighResolutionTime m_hrtimeEnd;
+	private RelativeTime m_rtimePeriod;
+	
+	public PeriodicParameters(HighResolutionTime hrtimeStart, 
+							  HighResolutionTime hrtimeEnd,
+							  RelativeTime rtimePeriod,
+							  RelativeTime rtimeCost, 
+							  RelativeTime rtimeDeadline )
+	{
+		super( 	rtimeCost, 
+				// 0 > deadline &lt;= period
+				rtimeDeadline == null ? rtimePeriod :
+				rtimeDeadline.compareTo( rtimePeriod ) > 0 ? rtimePeriod :
+				rtimeDeadline );
+		m_hrtimeStart = hrtimeStart;
+		m_hrtimeEnd = hrtimeEnd;
+		m_rtimePeriod = rtimePeriod;
+	
+	}
+	public RelativeTime getPeriod()
+	{
+		return m_rtimePeriod;
+	}
+	public HighResolutionTime getStart()
+	{
+		return m_hrtimeStart;
+	}
+	public void setPeriod( RelativeTime rtimePeriod )
+	{
+		m_rtimePeriod = rtimePeriod;
+	}
+	public void setStart( HighResolutionTime hrtimeStart )
+	{
+		m_hrtimeStart = hrtimeStart;
+	}
+	public HighResolutionTime getEnd()
+	{
+		return m_hrtimeEnd;
+	}
+	public void setEnd( HighResolutionTime hrtimeEnd )
+	{
+		m_hrtimeEnd = hrtimeEnd;
+	}
+	}
+  </Fragment>
+</File>

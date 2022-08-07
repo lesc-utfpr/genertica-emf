@@ -1,0 +1,278 @@
+<File Name="RateMonotonicScheduler.java" OutputDirectory="saito.sashimi.realtime" Aspects="SchedulingSupport">
+  <Fragment>
+package saito.sashimi.realtime;
+
+import saito.sashimi.*;
+
+public class RateMonotonicScheduler extends Scheduler {
+
+	private static AbsoluteTime nxtTaskActivationTime = new AbsoluteTime(0,0,0);
+	private static AbsoluteTime preemptTaskActivationTime = new AbsoluteTime(0,0,0);
+	private static AbsoluteTime auxTaskActivationTime = new AbsoluteTime(0,0,0);
+	private static AbsoluteTime aux2TaskActivationTime = new AbsoluteTime(0,0,0);
+	
+
+	public boolean isFeasible() {
+		return true;
+	}
+	protected int getContextOffsetForStaticMethod() { return 16; }
+	protected int getContextOffsetForVirtualMethod() { return 18; };
+
+
+	public void runScheduler() {
+		// Disable timer first !
+		FemtoJavaInterruptSystem.setEnable(0x6A); //x1101010
+        FemtoJavaTimer.stopTimer0();
+        
+        // The initSystem() context must be saved in the first runScheduler() call
+//        if (m_MainBaseStackPointer == 0xFFFF)
+        if (m_currentTask == -1)
+        	saveMainContext();
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+        else
+        	if (m_PeriodicTaskList[m_currentTask] != null)
+        	{
+                // verify deadline misses
+        		auxTaskActivationTime.set(m_PeriodicTaskList[m_currentTask].getResumeTime());
+        		auxTaskActivationTime.add(m_PeriodicTaskList[m_currentTask].getReleaseParameters().getDeadline());
+        		
+        		if (auxTaskActivationTime.compareTo(Clock.getTime()) &lt; 0)
+        		{
+        			// The task deadline was missed
+        			processDeadlineMisses(m_PeriodicTaskList[m_currentTask]);
+        			// reinitialize task stack
+    				m_PeriodicTaskList[m_currentTask].initializeStack();
+        		}
+        		else
+        		{
+                    // save current task context
+        			m_PeriodicTaskList[m_currentTask].saveContext();
+                    // Advise current task that it will lose the context
+           			m_PeriodicTaskList[m_currentTask].loseContext();
+        		}
+        	}
+  </Fragment>
+  <Fragment>
+        // try to find the next task to be scheduled
+        int nextTask = -1;
+        AbsoluteTime auxResumeTime = null;
+    	HighResolutionTime nextTaskPeriod = null; // Next task period time value
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+        // find first valid task
+        for(int i=0; (nextTask == -1) &amp;&amp; (i &lt; m_PeriodicListCount); i++)
+        {
+        	auxResumeTime = m_PeriodicTaskList[i].getResumeTime(); // only object reference to increase algorithm performance
+        	if (m_PeriodicTaskList[i].isStarted()
+				&amp;&amp; !m_PeriodicTaskList[i].isBlocked()
+				&amp;&amp; !m_PeriodicTaskList[i].isFinished()
+				// only periodic task are allowed in this scheduler.
+				// to run aperiodic task, a PeriodicServer must be created
+				&amp;&amp; (m_PeriodicTaskList[i].getReleaseParameters() instanceof PeriodicParameters)
+				// verify if the task can be scheduled
+				&amp;&amp; (auxResumeTime.compareTo(Clock.getTime()) &lt;= 0))
+        	{
+       			nextTask = i;
+       			nxtTaskActivationTime.set(auxResumeTime);
+                nextTaskPeriod = ((PeriodicParameters)m_PeriodicTaskList[nextTask].getReleaseParameters()).getPeriod();
+        	}
+        }
+  </Fragment>
+  <Fragment>
+        if (nextTask != -1)
+        {
+        	// compare founded task with other tasks 
+        	int i = nextTask + 1;
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+	        for(; i &lt; m_PeriodicListCount; i++)
+	        {
+	        	// only periodic task are allowed in this scheduler.
+				// to run aperiodic task, a PeriodicServer must be created
+	        	if (m_PeriodicTaskList[i].getReleaseParameters() instanceof PeriodicParameters)
+	        	{
+                    // only object reference to increase algorithm performance
+		        	auxResumeTime = m_PeriodicTaskList[i].getResumeTime(); 
+		        	HighResolutionTime auxNextTaskPeriod = ((PeriodicParameters)m_PeriodicTaskList[i].getReleaseParameters()).getPeriod(); 
+		        	
+		        	if (m_PeriodicTaskList[i].isStarted()
+		        		&amp;&amp; !m_PeriodicTaskList[i].isRunning()
+						&amp;&amp; !m_PeriodicTaskList[i].isBlocked()
+		        		&amp;&amp; !m_PeriodicTaskList[i].isFinished()
+						// Tasks with lesser periods have higher priority
+						&amp;&amp; (auxNextTaskPeriod.compareTo(nextTaskPeriod) &lt; 0)
+						// Verify if the task can be scheduled
+						&amp;&amp; (auxResumeTime.compareTo(Clock.getTime()) &lt;= 0))
+		        	{
+	        			nextTask = i;
+	        			nxtTaskActivationTime.set(auxResumeTime);
+	        			nextTaskPeriod = auxNextTaskPeriod;
+	        		}
+	        	}
+	        }
+  </Fragment>
+  <Fragment>
+        }
+        
+        if (nextTask != -1) { 
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+        if (nextTask &lt; m_PeriodicListCount)
+        {
+            int preemptTask = findPreemptTask(nextTask, nextTaskPeriod);
+            // if the task that will preempt next task is less than Clock.getTime()
+            // then the preempt task will be the next task to be executed
+            if ((preemptTask != -1) &amp;&amp; !preemptTaskActivationTime.isGreaterThanZero())
+            	nextTask = preemptTask;
+        	
+        	// retore next task context
+        	if (m_currentTask != nextTask)
+        	{
+        		m_currentTask = nextTask;
+        		m_PeriodicTaskList[nextTask].restoreContext();
+        	}
+        	else // Maybe this "else" can be deleted !
+        	{
+       			m_PeriodicTaskList[nextTask].restoreContext();
+        	}
+        }
+        else
+        {
+  </Fragment>
+  <Fragment>
+        	// don't have any task to be scheduled, so the initSystem() context must be restored
+        	if (!isAllTasksFinished())
+        	  programSchedulerTimer();
+        	m_currentTask = -1;
+        	restoreMainContext();
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+        }
+  </Fragment>
+  <Fragment>
+        }
+	}
+	
+	protected void processDeadlineMisses(RealtimeThread task)
+	{
+        // A deadline was missed !
+		task.exceptionTask();
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+		// try to synchronize the current Time with task next Resume Time
+		if (task.getReleaseParameters() instanceof PeriodicParameters)
+		{
+			while (task.getResumeTime().compareTo(Clock.getTime()) &lt; 0)
+				task.setNextPeriodResumeTime();
+		}
+		else
+		{
+  </Fragment>
+  <Fragment>
+			// The aperiodic task are removed from Task List
+			removeFromFeasibility(task);
+			m_currentTask = -1;
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+		}
+  </Fragment>
+  <Fragment>
+	}
+	
+	protected int findPreemptTask(int nextTask, HighResolutionTime taskPeriod)
+	{
+		int preemptTask = -1;
+        // try to find if an task will preempt the next task to be scheduled
+		aux2TaskActivationTime.set(Clock.getTime());
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+    	aux2TaskActivationTime.add(m_PeriodicTaskList[nextTask].getReleaseParameters().getCost());
+    	// Verify if the next task was executed and preempted by other task, so the 
+    	// previous execution time must be subtracted from the task WCET
+    	aux2TaskActivationTime.subtract(m_PeriodicTaskList[nextTask].getPreviousProcessTime());
+    	
+    	int i = 0;
+    	
+    	for(; i &lt; m_PeriodicListCount; i++)
+        {
+        	if ((i != nextTask)
+        		&amp;&amp; m_PeriodicTaskList[i].isStarted()
+				&amp;&amp; !m_PeriodicTaskList[i].isBlocked()
+        		&amp;&amp; !m_PeriodicTaskList[i].isFinished()
+				// only periodic task are allowed in this scheduler.
+				// to run aperiodic task, a PeriodicServer must be created
+				&amp;&amp; (m_PeriodicTaskList[i].getReleaseParameters() instanceof PeriodicParameters)
+				&amp;&amp; (((PeriodicParameters)m_PeriodicTaskList[i].getReleaseParameters()).getPeriod().compareTo(taskPeriod) &lt; 0))
+        	{
+        		auxTaskActivationTime.set(m_PeriodicTaskList[i].getResumeTime());
+        		if ((auxTaskActivationTime.compareTo(aux2TaskActivationTime) &lt; 0)
+	        		&amp;&amp; ((preemptTask == -1) || (auxTaskActivationTime.compareTo(preemptTaskActivationTime) &lt; 0)))
+        		{
+        			preemptTask = i;
+        			preemptTaskActivationTime.set(auxTaskActivationTime);
+        		}
+        	}
+        }
+  </Fragment>
+  <Fragment>
+    	if (preemptTask == -1)
+    	{
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+    		// if none task will preempt the next task then timeout represents the next task deadline
+    		preemptTaskActivationTime.set(m_PeriodicTaskList[nextTask].getResumeTime());
+    		preemptTaskActivationTime.add(m_PeriodicTaskList[nextTask].getReleaseParameters().getDeadline());
+  </Fragment>
+  <Fragment>
+    	}
+    	preemptTaskActivationTime.subtract(Clock.getTime());
+    	if (preemptTaskActivationTime.isGreaterThanZero())
+    	{
+    		// set and active scheduler timer
+    		FemtoJavaInterruptSystem.setEnable(0x2A);
+    		FemtoJavaTimer.setTimer0(preemptTaskActivationTime.convertToFJTimeoutValue());
+    		FemtoJavaTimer.startTimer0();
+    	}
+    	return preemptTask;	
+    }
+	
+	protected void programSchedulerTimer()
+	{
+        // timer must be started to schedule a next active task
+    	nxtTaskActivationTime.set(0,0,0);
+    	int i = 0;
+    	int nextTask = -1;
+  </Fragment>
+  <Fragment Aspects="PeriodicTiming">
+    	for(; i &lt; m_PeriodicListCount; i++)
+        {
+        	if (m_PeriodicTaskList[i].isStarted()
+				&amp;&amp; !m_PeriodicTaskList[i].isBlocked()
+        		&amp;&amp; !m_PeriodicTaskList[i].isFinished())
+        	{
+        		auxTaskActivationTime.set(m_PeriodicTaskList[i].getResumeTime());
+        		if (!nxtTaskActivationTime.isAssigned() || (auxTaskActivationTime.compareTo(nxtTaskActivationTime) &lt; 0))
+        			nxtTaskActivationTime.set(auxTaskActivationTime);
+        	}
+        }
+  </Fragment>
+  <Fragment>
+    	if (nxtTaskActivationTime.isAssigned())
+    	{
+    		nxtTaskActivationTime.subtract(Clock.getTime());
+    		// set timeout to activate the preempt task
+    		FemtoJavaInterruptSystem.setEnable(0x2A);
+    		if (nxtTaskActivationTime.isGreaterThanZero())
+    			FemtoJavaTimer.setTimer0(nxtTaskActivationTime.convertToFJTimeoutValue());
+    		else
+    			// nxtTaskActivationTime is less or equal to current time, 
+    			// this means that a task is ready to execute, so scheduler must be 
+    			// executed as soon as possible...
+    			FemtoJavaTimer.setTimer0(200); 
+    		FemtoJavaTimer.startTimer0();
+    	}
+	}
+}
+  </Fragment>
+</File>

@@ -1,0 +1,835 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Platforms>
+  <!--**********************************************************************-->
+  <!--*          Configuration for RT-FemtoJava Platform                   *-->
+  <!--**********************************************************************-->
+  <RT-FemtoJava>
+    <!-- Mapping rules for APPLICATION CODE -->
+    <Application>
+      <Software>
+        <!-- Source code generation options -->
+        <SourceOptions isAspectLanguage="no" ClassesPerFile="1" 
+                       hasClassesDeclaration="no" Identation="5"
+                       BlockStart="{" BlockEnd="}">
+          <FileNameConvention>$Class.Name</FileNameConvention>
+          <Package>package $Class.Package;</Package>
+          <SourceReference>import $ReferencedClass.Package\.$ReferencedClass.Name;</SourceReference>
+          <SourceOrganization>
+            <DeclarationFile FileExtension="">
+              $SourceCode.ClassesDeclaration
+            </DeclarationFile>
+            <ImplementationFile FileExtension=".java">
+              $SourceCode.PackagesDeclaration
+              \n$SourceCode.ReferencesDeclaration
+              \n$SourceCode.ClassesImplementation
+            </ImplementationFile>
+          </SourceOrganization>
+        </SourceOptions>
+        
+        
+        <!-- Mapping rules for PRIMARY ELEMENTS -->
+        <PrimaryElementsMapping>
+          <DataTypes>
+            <Array>
+              #set( $n = $DataType.getSize() )
+              #set( $s = $CodeGenerator.getDataTypeStr($DataType.DataType()) )
+              #if ($n > 0)
+                $s[]
+              #else
+                 ArrayList&lt;$s>
+              #end
+            </Array>
+            <Boolean>boolean</Boolean>
+            <Byte>byte</Byte>
+            <Char>char</Char>
+            <Class>$DataType.Represent.Name</Class>
+            <DateTime>Date</DateTime>
+            <EnumerationDefinition>
+              public enum $DataType.Name 
+              $Options.BlockStart 
+              #foreach ($v in $DataType.Values) 
+                #if ($velocityCount > 1) , #end 
+                \n$v 
+              #end 
+              \n$Option.BlockEnd
+            </EnumerationDefinition>
+            <Enumeration>
+              ${DataType.Name}
+            </Enumeration>
+            <Integer>int</Integer>
+            <Long>long</Long>
+            <Short>short</Short>
+            <String>String</String>
+            <Void>void</Void>
+            <Double>double</Double>
+            <Float>float</Float>
+          </DataTypes>
+          <DataTypeDefaultValues>
+            <Array>null</Array>
+            <Boolean>true</Boolean>
+            <Byte>0</Byte>
+            <Char>''</Char>
+            <Class>null</Class>
+            <DateTime>new Date(2000, 01, 01, 0, 0, 0)</DateTime>
+            <Enumeration></Enumeration>
+            <Integer>0</Integer>
+            <Long>0</Long>
+            <Short>0</Short>
+            <String>""</String>
+            <Void></Void>
+            <Double>0.0</Double>
+            <Float>0.0</Float>
+          </DataTypeDefaultValues>
+          <Visibilities>
+            <Private>private</Private>
+            <Protected>protected</Protected>
+            <Public>public</Public>
+          </Visibilities>
+          <ParameterKinds>
+            <In></In>
+            <Out></Out>
+            <InOut></InOut>
+          </ParameterKinds>
+        </PrimaryElementsMapping>
+        
+        
+        <!-- Mapping rules for CLASSES -->
+        <Classes>
+          <Declaration></Declaration>
+          
+          <Implementation>
+            import saito.sashimi.realtime.*; 
+            \n
+            public
+            #if ($Class.isAbstract()) 
+              abstract 
+            #end
+            class $Class.Name 
+            #if ($Class.SuperClass) 
+              extends $Class.SuperClass.Name 
+            #end
+            \n$Options.BlockStart
+            \n$CodeGenerator.getAttributesDeclaration(1)
+            \n
+            \n$CodeGenerator.getMessagesImplementation(1)
+            \n$Options.BlockEnd
+          </Implementation>
+          
+          <Attributes>
+            $VisibilityStr 
+            #if ($Attribute.isStatic()) 
+              static 
+            #end 
+            $DataTypeStr $Attribute.Name;
+          </Attributes>
+          
+          <Messages>
+            <Declaration></Declaration>
+            <Implementation>
+              #if ($DERCSHelper.isDestructor($Message) == false) 
+                $VisibilityStr 
+                #if ($Message.isStatic())
+                  static 
+                #end 
+                #if ($Message.isAbstract()) 
+                  abstract 
+                #end 
+                #if ($DERCSHelper.isNormalMethod($Message)) 
+                  $ReturnTypeStr 
+                #end 
+                ${Message.Name}( 
+                #if ($Message.ParametersCount > 0) 
+                  #foreach( $param in $Message.Parameters ) 
+                    #if ($velocityCount > 1), #end 
+                    $CodeGenerator.getDataTypeStr($param.DataType) $param.Name 
+                  #end 
+                #end 
+                ) 
+                #if (!$Message.isAbstract()) 
+                $Options.BlockStart
+                   \n// Variables
+                   \n$CodeGenerator.getVariablesDeclaration(1)
+                   \n// Actions
+                   \n$CodeGenerator.getActionsCode(1)
+                \n$Options.BlockEnd
+                #else
+                  ;
+                #end
+              #else
+                \n// *****************************
+                \n//    destructor was ignored!
+                \n// *****************************
+              #end
+            </Implementation>
+          </Messages>
+        </Classes>
+        
+        
+        <!-- Mapping rules for BEHAVIOR, i.e. sequence of actions -->
+        <Behavior>
+          <VariableDeclaration>
+            $DataTypeStr $Variable.Name;
+          </VariableDeclaration>
+          
+          <Branch>
+		    #if ($Branch.EnterCondition != " ")
+              if ( $Branch.EnterCondition ) $Options.BlockStart 
+			#end
+              #set( $ident = $IdentationLevel + 0) 
+              \n$CodeGenerator.getVariablesDeclaration($ident) 
+              \n$CodeGenerator.getActionsCode($ident) 
+			#if ($Branch.EnterCondition != " ")
+              \n$Options.BlockEnd 
+			#end
+            #if ( $Branch.hasAlternativeBehavior() ) 
+			  \n
+              \nelse $Options.BlockStart 
+                \n$CodeGenerator.getVariablesDeclaration($Branch.AlternativeBehavior, $ident) 
+                \n$CodeGenerator.getActionsCode($Branch.AlternativeBehavior, $ident) 
+              \n$Options.BlockEnd 
+            #end
+          </Branch>
+          
+          <Loop>
+            #if ($Loop.NumberOfRepetitions > 0) 
+               for(int $IndexVariableName = 0; $IndexVariableName &lt; $Loop.NumberOfRepetitions; $IndexVariableName++) 
+            #elseif ($Loop.ExitCondition) 
+              #if ($Loop.EnterCondition)
+                 ${Loop.EnterCondition}; 
+              #end  
+              \n while ($Loop.ExitCondition) 
+            #end 
+            $Options.BlockStart 
+               \n$CodeGenerator.getVariablesDeclaration(1) 
+               \n$CodeGenerator.getActionsCode(1) 
+            \n$Options.BlockEnd
+          </Loop>
+          
+          <Assignment>
+            #if ($Action.isVariableAssignment())
+              $Action.Variable.Name 
+            #else
+              #if ($Action.Object)
+                 ${Action.Object.Name}.${Action.Attribute.Name} 
+              #else
+                 ${Action.Attribute.Name} 
+              #end
+            #end
+            = 
+            #if ($Action.isAssignmentOfValue())
+              $Action.Value; 
+            #else
+              $CodeGenerator.getActionCode($Action.Action)
+            #end
+          </Assignment>
+          
+          <Object>
+            <Creation>
+              #set( $x = 'nada' )
+              new ${Action.Object.InstanceOf.Name}(
+              #if ($Action.ParametersValuesCount > 0)
+                #foreach( $x in $Action.ParametersValues )
+                  #if ($velocityCount > 1), #end
+                  $x
+                #end
+              #end
+              );
+            </Creation>
+            
+            <Destruction></Destruction>
+          </Object>
+          
+          <Expression>
+            #if ($DERCSHelper.isNormalMethod($Message)) 
+              ${Action.Expression} 
+            #else 
+              ${Action.Expression}
+            #end
+            ;
+          </Expression>
+          
+          <Return>
+            return 
+            #if ($Action.isAssignmentOfValue()) 
+              ${Action.Value} ;
+            #elseif ($Action.isAttributeAssignment()) 
+              ${Action.Attribute.Name} ;
+            #else 
+              $CodeGenerator.getActionCode($Action.Action) 
+            #end
+          </Return>
+          
+          <StateChange></StateChange>
+          
+          <SendMessage>
+            <ToLocal>
+              <Software>
+                #if ($Action.getToObject() != $Action.getFromObject()) 
+                  #if ($Action.RelatedMethod.isStatic()) 
+                    ${Action.RelatedMethod.OwnerClass.Name}.
+                  #else
+                    ${Action.ToObject.Name}.
+                  #end
+                #end
+                ${Action.RelatedMethod.Name}(
+                #if ($Action.ParametersValuesCount > 0)
+                  #foreach($param in $Action.getParametersValues())
+                    #if ($velocityCount > 1), #end
+                    #set( $x =  $velocityCount - 1)
+                    #if ($Action.isParameterValue($x))
+                      ${param}
+                    #else
+                      ${param.Name}
+                    #end
+                  #end
+                #end
+                );
+              </Software>
+              <Hardware></Hardware>
+            </ToLocal>
+            
+            <ToRemote>
+              <Software>
+                #if ($Action.getToObject() != $Action.getFromObject()) 
+                  #if ($Action.RelatedMethod.isStatic()) 
+                    ${Action.RelatedMethod.OwnerClass.Name}.
+                  #else
+                    ${Action.ToObject.Name}.
+                  #end
+                #end
+                ${Action.RelatedMethod.Name}(
+                #if ($Action.ParametersValuesCount > 0)
+                  #foreach($param in $Action.getParametersValues())
+                    #if ($velocityCount > 1), #end
+                    #set( $x =  $velocityCount - 1)
+                    #if ($Action.isParameterValue($x)) 
+                      ${param}
+                    #else
+                      ${param.Name}
+                    #end
+                  #end
+                #end
+                ); // ** REMOTE **
+              </Software>
+              <Hardware></Hardware>
+            </ToRemote>
+          </SendMessage>
+          
+          <InsertArrayElement>
+            #if ($Action.isVariableAssignment())
+              $Action.Variable.Name
+            #else
+              #if ($Action.Object)
+                 ${Action.Object.Name}.${Action.Attribute.Name}
+              #else
+                 ${Action.Attribute.Name}
+              #end
+            #end
+            .add(${Action.Element});
+          </InsertArrayElement>
+          
+          <RemoveArrayElement>
+            #if ($Action.isVariableAssignment())
+              $Action.Variable.Name
+            #else
+              #if ($Action.Object)
+                 ${Action.Object.Name}.${Action.Attribute.Name}
+              #else
+                 ${Action.Attribute.Name}
+              #end
+            #end
+            .remove(${Action.Element});
+          </RemoveArrayElement>
+          
+          <GetArrayElement>
+            #if ($Action.isVariableAssignment())
+              $Action.Variable.Name
+            #else
+              #if ($Action.Object)
+                 ${Action.Object.Name}.${Action.Attribute.Name}
+              #else
+                 ${Action.Attribute.Name}
+              #end
+            #end
+            .get(${Action.Element});
+          </GetArrayElement>
+          
+          <SetArrayElement>
+            #if ($Action.isVariableAssignment())
+              $Action.Variable.Name
+            #else
+              #if ($Action.Object)
+                 ${Action.Object.Name}.${Action.Attribute.Name}
+              #else
+                 ${Action.Attribute.Name}
+              #end
+            #end
+            .set(${Action.Element});
+          </SetArrayElement>
+          
+          <ArrayLength>
+            #if ($Action.isVariableAssignment())
+              $Action.Variable.Name
+            #else
+              #if ($Action.Object)
+                 ${Action.Object.Name}.${Action.Attribute.Name}
+              #else
+                 ${Action.Attribute.Name}
+              #end
+            #end
+            .size();
+          </ArrayLength>
+        </Behavior>
+        
+        
+        <!-- Mapping rules for INTERRUPT HANDLING code -->
+        <InterruptHandling>
+        </InterruptHandling>
+        
+        
+        <!-- Mapping rules for DERAF ASPECTS -->
+        <Aspects>
+          <!--**************************************************************-->
+          <!--*                Timing Package                              *-->
+          <!--**************************************************************-->
+          <TimingAttributes>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Deadline" Order="3" ModelLevel="no">
+                private static RelativeTime _Deadline = new RelativeTime(0,0,0);
+                \n 
+                \npublic void exceptionTask() {}
+                \nprotected void initializeStack() {}
+                \npublic void mainTask() {}
+              </Structural>
+              <Structural Name="Priority" Order="3">
+              </Structural>
+              <Structural Name="WCET" Order="3" ModelLevel="no">
+                private static RelativeTime _Cost = new RelativeTime(0,0,0);
+              </Structural>
+              <Structural Name="ModityClassStructure" Order="0" ModelLevel="yes">
+                $DERCSHelper.changeSuperClass($Class, $DERCSFactory.newClass("RealtimeThread", null, true), true)
+              </Structural>
+              <Structural Name="ModifyConstructor" Order="0" ModelLevel="yes">
+                $Message.addParameter("pDeadline", $DERCSFactory.newInteger(false), $DERCSFactory.getParameterIn());
+                $Message.addParameter("pCost", $DERCSFactory.newInteger(false), $DERCSFactory.getParameterIn());
+              </Structural>
+              <Behavioral Name="SetTimingAttributes" Order="2" ModelLevel="no">
+                \n_Deadline.set(0,pDeadline,0);
+                \n_Cost.set(0,pCost,0);
+                \ngetReleaseParameters().setDeadline(_Deadline);
+                \ngetReleaseParameters().setCost(_Cost);
+              </Behavioral>
+              <Behavioral Name="AdaptObjectConstruction" Order="0" ModelLevel="yes">
+                $Action.addParameterValue( $DERCSHelper.strTimeToInteger( $Crosscutting.getValueOf("Deadline"), "ms" ) ) 
+                $Action.addParameterValue( $DERCSHelper.strTimeToInteger( $Crosscutting.getValueOf("WCET"), "ms" ) ) 
+              </Behavioral>
+              <Structural Name="AddAccessMethods" Order="3" ModelLevel="no">
+                // TimingAttributes.AddAccessMethods
+              </Structural>
+              <Structural Name="StartTime" Order="3" ModelLevel="no">
+                // TimingAttributes.StartTime
+              </Structural>
+              <Structural Name="EndTime" Order="3" ModelLevel="no">
+                // TimingAttributes.EndTime
+              </Structural>
+            </Adaptations>
+          </TimingAttributes>
+          
+          <PeriodicTiming>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Period" Order="1" ModelLevel="no">
+                \nprivate static RelativeTime _Period = new RelativeTime(0,0,0);
+                \nprivate static PeriodicParameters _PeriodicParams = new PeriodicParameters(null, null, null, null, null);
+              </Structural>
+              <Structural Name="ModifyConstructor" Order="1" ModelLevel="yes">
+                $Message.addParameter("pPeriod", $DERCSFactory.newInteger(false), $DERCSFactory.getParameterIn());
+              </Structural>
+              <Behavioral Name="SetPeriod" Order="2" ModelLevel="no">
+                \n_Period.set(0,pPeriod,0);
+                \n_PeriodicParams.setPeriod(_Period);
+                \nsetReleaseParameters(_PeriodicParams);
+              </Behavioral>
+              <Behavioral Name="FrequencyControl" Order="3" ModelLevel="no">
+                waitForNextPeriod();
+              </Behavioral>
+              <Behavioral Name="LoopMechanism" Order="4" ModelLevel="no">
+                while (isRunning()) $Options.BlockStart
+                  \n$CodeGenerator.getGeneratedCodeFragment(1)
+                \n$Options.BlockEnd
+              </Behavioral>
+              <Behavioral Name="AdaptObjectConstruction" Order="1" ModelLevel="yes">
+                $Action.addParameterValue( $DERCSHelper.strTimeToInteger( $Crosscutting.getValueOf("Period"), "ms" ) ) 
+              </Behavioral>
+            </Adaptations>
+          </PeriodicTiming>
+
+          <SchedulingSupport>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Scheduler" Order="0" ModelLevel="no">
+                // SchedulingSupport.Begin
+                \npublic static EDFScheduler scheduler = new EDFScheduler();
+                \npublic void idleTask() {} 
+                \n// SchedulingSupport.End 
+              </Structural>
+              <Behavioral Name="SetupConcurrentActivities" Order="0" ModelLevel="no">
+                \n // SchedulingSupport 
+                \nScheduler.setDefaultScheduler(scheduler);
+                \n 
+                #foreach( $Obj in $Message.TriggeredBehavior.BeharioralElements)
+                   #if ($DERCSHelper.isAssignmentOfActiveObject($Obj))
+                      #if ($Action.isVariableAssignment())
+                         #set( $ObjName = $Obj.Variable.Name )
+                      #elseif ($Obj.Object)
+                         #set( $ObjName = $Obj.Object.Name + '.' + $Obj.Attribute.Name)
+                      #else
+                         #set( $ObjName = $Obj.Attribute.Name)
+                      #end
+                      \n
+                      \n${ObjName}.addToFeasibility();
+                      \n${ObjName}.start();
+                      \n
+                   #end
+                #end
+                \n
+                \nscheduler.setupTimer();
+                \nidleTask();
+              </Behavioral>
+            </Adaptations>
+          </SchedulingSupport>
+          
+          <TimeBoundedActivity>
+            <Adaptations>
+              <Structural Name="TimeCountInfrastructure" Order="0" ModelLevel="no">
+                // TimeBoundedActivity.TimeCountInfrastructure
+              </Structural>
+              <Behavioral Name="StartCounting" Order="0" ModelLevel="no">
+                // TimeBoundedActivity.StartCounting
+              </Behavioral>
+              <Behavioral Name="StopCounting" Order="0" ModelLevel="no">
+                // TimeBoundedActivity.StopCounting
+              </Behavioral>
+            </Adaptations>
+          </TimeBoundedActivity>
+          
+          <!--**************************************************************-->
+          <!--*                Precision Package                           *-->
+          <!--**************************************************************-->
+          <Jitter>
+            <Adaptations>
+              <Behavioral Name="StartTime" Order="0" ModelLevel="no">
+                // Jitter.StartTime
+              </Behavioral>
+              <Behavioral Name="VerifyToleratedJitter" Order="0" ModelLevel="no">
+                // Jitter.VerifyToleratedJitter
+              </Behavioral>
+            </Adaptations>
+          </Jitter>
+          
+          <ToleratedDelay>
+            <Adaptations>
+              <Behavioral Name="StartTime" Order="0" ModelLevel="no">
+                // ToleratedDelay.StartTime
+              </Behavioral>
+              <Behavioral Name="VerifyToleratedDelay" Order="0" ModelLevel="no">
+                // ToleratedDelay.VerifyToleratedDelay
+              </Behavioral>
+            </Adaptations>
+          </ToleratedDelay>
+          
+          <ClockDrift>
+            <Adaptations>
+              <Behavioral Name="CheckClockDrift" Order="0" ModelLevel="no">
+                // ClockDrift.CheckClockDrift
+              </Behavioral>
+            </Adaptations>
+          </ClockDrift>
+          
+          <DataFreshness>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="ValidityInformation" Order="0" ModelLevel="no">
+                // freshness: ${Attribute.Name}
+                \nprivate static AbsoluteTime ${Attribute.Name}_Validity = new AbsoluteTime(0,0,0);
+                \nprivate static AbsoluteTime ${Attribute.Name}_NextValidity = new AbsoluteTime(0,0,0);
+                \n
+                \npublic void set${Attribute.Name}Validity(int newValidity) $Options.BlockStart
+                \n   ${Attribute.Name}_Validity.set(0,newValidity,0);
+                \n$Options.BlockEnd
+                \n//freshness: ${Attribute.Name}
+                \n
+              </Structural>
+              <Structural Name="SetValidity" Order="0" ModelLevel="no">
+                #set( $ObjName = '---')
+                #if ($Action.isVariableAssignment())
+                   #set( $ObjName = $Action.Variable.Name )
+                #elseif ($Action.Object)
+                   #set( $ObjName = $Action.Object.Name + '.' + $Action.Attribute.Name)
+                #else
+                   #set( $ObjName = $Action.Attribute.Name)
+                #end
+                // begin of freshness setup
+                \n
+                  #foreach( $NFR in ${Crosscutting.CrosscutingInformations} ) 
+                    #if ( $NFR.Name == "Validity" ) 
+                       #if ( $NFR.ElementName == $NFR.Name) 
+                         #foreach ( $Attr in $Crosscutting.getAffectedElement().getAttributes() )
+                           \n${ObjName}.set${Attr.Name}Validity($DERCSHelper.strTimeToInteger( $NFR.Value, "ms" )); // freshness 
+                           \n
+                         #end
+                       #else
+                         \n${ObjName}.set${NFR.getElementName()}Validity($DERCSHelper.strTimeToInteger( $NFR.Value, "ms" )); // freshness 
+                         \n
+                       #end 
+                    #end 
+                  #end 
+                \n // end of freshness setup
+              </Structural>
+              <Behavioral Name="VerifyFreshness" Order="0" ModelLevel="no">
+                #if ($Message.AssociatedAttribute)
+                  if (${Message.AssociatedAttribute.Name}_NextValidity.compareTo(Clock.getTime()) >= 0) $Options.BlockStart 
+                    \n$CodeGenerator.getGeneratedCodeFragment(1)
+                  \n$Options.BlockEnd
+                  \nelse $Options.BlockStart
+                  \n  ${Message.AssociatedAttribute.Name} = ${Message.AssociatedAttribute.Name} * 90 / 100;                    
+                  \n$Options.BlockEnd                 
+                #end
+              </Behavioral>
+              <Behavioral Name="UpdateFreshness" Order="0" ModelLevel="no">
+                \n${Message.AssociatedAttribute.Name}_NextValidity.set(Clock.getTime());
+                \n${Message.AssociatedAttribute.Name}_NextValidity.add(${Message.AssociatedAttribute.Name}_Validity);
+              </Behavioral>
+            </Adaptations>
+          </DataFreshness>
+          
+          <!--**************************************************************-->
+          <!--*                Synchronization Package                     *-->
+          <!--**************************************************************-->
+          <ConcurrentAccessControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="ConcurrencyControlMechanism" Order="0" ModelLevel="no">
+                // ConcurrentAccessControl.ConcurrencyControlMechanism
+              </Structural>
+              <Behavioral Name="AcquireAccess" Order="0" ModelLevel="no">
+                // ConcurrentAccessControl.AquireAccess
+              </Behavioral>
+              <Behavioral Name="ReleaseAccess" Order="0" ModelLevel="no">
+                // ConcurrentAccessControl.ReleaseAccess
+              </Behavioral>
+            </Adaptations>
+          </ConcurrentAccessControl>
+          
+          <MessageSynchronization>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="WaitingMechanism" Order="0" ModelLevel="no">
+                // MessageSynchronization.WaitingMechanism
+              </Structural>
+              <Behavioral Name="WaitForAcknowledge" Order="0" ModelLevel="no">
+                // MessageSynchronization.WaitForAcknowledge
+              </Behavioral>
+            </Adaptations>
+          </MessageSynchronization>
+          
+          <!--**************************************************************-->
+          <!--*                Communication Package                       *-->
+          <!--**************************************************************-->
+          <MessageAck>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="AcknowledgmentMechanism" Order="0" ModelLevel="no">
+                // MessageAck.AcknowledgeMechanism
+              </Structural>
+              <Behavioral Name="SignalAcknowledgmentMechanism" Order="0" ModelLevel="no">
+                // MessageAck.SignalAcknowledgeMechanism
+              </Behavioral>
+              <Behavioral Name="SendAcknowledgment" Order="0" ModelLevel="no">
+                // MessageAck.SendAcknowledge
+              </Behavioral>
+            </Adaptations>
+          </MessageAck>
+          
+          <MessageIntegrity>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Behavioral Name="GenerateIntegrityInfo" Order="0" ModelLevel="no">
+                // MessageIntegrity.GenerateIntegrityInfo
+              </Behavioral>
+              <Behavioral Name="VerifyIntegrityInfo" Order="0" ModelLevel="no">
+                // MessageIntegrity.VerifyIntegrityInfo
+              </Behavioral>
+            </Adaptations>
+          </MessageIntegrity>
+          
+          <MessageCompression>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Behavioral Name="Compress" Order="0" ModelLevel="no">
+                // MessageCompression.Compress
+              </Behavioral>
+              <Behavioral Name="Decompress" Order="0" ModelLevel="no">
+                // MessageCompression.Decompress
+              </Behavioral>
+            </Adaptations>
+          </MessageCompression>
+          
+          <!--**************************************************************-->
+          <!--*                TaskAllocation Package                      *-->
+          <!--**************************************************************-->
+          <NodeStatusRetrieval>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="Alive" Order="0" ModelLevel="no">
+                // NodeStatusRetrieval.Alive
+              </Structural>
+              <Behavioral Name="ProcessingLoad" Order="0" ModelLevel="no">
+                // NodeStatusRetrieval.ProcessingLoad
+              </Behavioral>
+              <Behavioral Name="MessageThroughput" Order="0" ModelLevel="no">
+                // NodeStatusRetrieval.MessageThroughput
+              </Behavioral>
+            </Adaptations>
+          </NodeStatusRetrieval>
+          
+          <TaskMigration>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Behavioral Name="Migrate" Order="0" ModelLevel="no">
+                // TaskMigration.Migrate
+              </Behavioral>
+              <Structural Name="MigrationMechanism" Order="0" ModelLevel="no">
+                // TaskMigration.MigrationMechanism
+              </Structural>
+            </Adaptations>
+          </TaskMigration>
+          
+          <!--**************************************************************-->
+          <!--*                    Embedded Package                        *-->
+          <!--**************************************************************-->
+          <HwAreaMonitoring>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="HwAreMonitoringMechanism" Order="0" ModelLevel="no">
+                // HwAreaMonitoring.HwAreMonitoringMechanism
+              </Structural>
+              <Behavioral Name="IncreaseAreaUsage" Order="0" ModelLevel="no">
+                // HwAreaMonitoring.IncreaseAreaUsage
+              </Behavioral>
+              <Behavioral Name="DecreaseAreaUsage" Order="0" ModelLevel="no">
+                // HwAreaMonitoring.DecreaseAreaUsage
+              </Behavioral>
+            </Adaptations>
+          </HwAreaMonitoring>
+          
+          <HwAreaControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="HwAreaControlPolicy" Order="0" ModelLevel="no">
+                // HwAreaControl.InsertControlMechanism
+              </Structural>
+            </Adaptations>
+          </HwAreaControl>
+          
+          <EnergyMonitoring>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="EnergyMonitoringMechanism" Order="0" ModelLevel="no">
+                // EnergyMonitoring.EnergyMonitoringMechanism
+              </Structural>
+              <Behavioral Name="StartingEnergyAmount" Order="0" ModelLevel="no">
+                // EnergyMonitoring.StartingEnergyAmount
+              </Behavioral>
+              <Behavioral Name="CalculateEnergyConsumption" Order="0" ModelLevel="no">
+                // EnergyMonitoring.CalculateEnergyConsumption
+              </Behavioral>
+            </Adaptations>
+          </EnergyMonitoring>
+          
+          <EnergyControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="EnergyConsumptionPolicy" Order="0" ModelLevel="no">
+                // EnergyControl.EnergyConsumptionPolicy
+              </Structural>
+            </Adaptations>
+          </EnergyControl>
+          
+          <MemoryUsageMonitoring>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="MemoryMonitoringMechanism" Order="0" ModelLevel="no">
+                // MemoryUsageMonitoring.MemoryMonitoringMechanism
+              </Structural>
+              <Behavioral Name="IncreaseMemoryUsage" Order="0" ModelLevel="no">
+                // MemoryUsageMonitoring.IncreaseMemoryUsage
+              </Behavioral>
+              <Behavioral Name="DecreaseMemoryUsage" Order="0" ModelLevel="no">
+                // MemoryUsageMonitoring.DecreaseMemoryUsage
+              </Behavioral>
+            </Adaptations>
+          </MemoryUsageMonitoring>
+          
+          <MemoryControl>
+            <Declaration></Declaration>
+            <Adaptations>
+              <Structural Name="MemoryUsageControlPolicy" Order="0" ModelLevel="no">
+                // MemoryControl.MemoryUsageControlPolicy
+              </Structural>
+            </Adaptations>
+          </MemoryControl>
+        </Aspects>
+      </Software>
+      
+      <Hardware></Hardware>
+    </Application>
+    
+    
+    <!-- Mapping rules for PLATFORM CODE -->
+    <PlatformConfiguration>
+      <Software>
+        <SourceOptions OutputDirectory="platform"></SourceOptions>
+        <Files xmlns:xi="http://www.w3.org/2001/XInclude">
+          <xi:include href="./platform_RT-FemtoJava/AbsoluteTime.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/AbstractPoolingServer.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/AicParameters.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/AsyncEvent.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/AsyncEventHandler.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/AsyncEventsMechanism.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/Clock.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/EDFScheduler.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/FixedPriorityHWScheduler.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/HighResolutionTime.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/HWRealtimeThread.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/InterruptPoolingMechanism.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/OneShotTimer.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/PeriodicParameters.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/PeriodicTimer.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/PoolingServer2.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/PoolingServer1.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/PriorityParameters.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/PriorityScheduler.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/PriorityScheduler2.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/RateMonotonicScheduler.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/RealtimeThread.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/RelativeTime.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/ReleaseParameters.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/Scheduler.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/SchedulingParameters.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/SporadicParameters.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/Timer.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/TimeTriggeredRealtimeThread.xml"/>
+          <xi:include href="./platform_RT-FemtoJava/TimeTriggeredScheduler.xml"/>
+        </Files>
+      </Software>
+      <Hardware></Hardware>
+    </PlatformConfiguration>
+  </RT-FemtoJava>
+  
+  <!--**********************************************************************-->
+  <!--*          Configuration for DREAMS Platform                         *-->
+  <!--**********************************************************************-->
+  <Dreams></Dreams>
+</Platforms>

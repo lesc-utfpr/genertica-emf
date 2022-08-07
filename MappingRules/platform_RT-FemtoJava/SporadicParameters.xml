@@ -1,0 +1,20 @@
+<File Name="SporadicParameters.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="SchedulingSupport, TimingAttributes">
+  <Fragment>
+    package saito.sashimi.realtime;
+    public class SporadicParameters extends AperiodicParameters {
+      private RelativeTime m_rtimeMinInterarrival;
+      public SporadicParameters( RelativeTime rtimeMinInterarrival, RelativeTime rtimeCost, 
+                           RelativeTime rtimeDeadline ) {
+      super( rtimeCost, rtimeDeadline );
+      m_rtimeMinInterarrival = rtimeMinInterarrival;
+    }
+    public RelativeTime getMinimumInterarrival(){
+      return m_rtimeMinInterarrival;
+    }
+    public void setMinimumInterarrival( RelativeTime rtimeMinInterarrival ){
+      m_rtimeMinInterarrival = rtimeMinInterarrival;
+    }
+  }
+  </Fragment>
+</File>

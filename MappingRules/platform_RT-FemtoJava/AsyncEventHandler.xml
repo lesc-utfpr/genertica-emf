@@ -1,0 +1,31 @@
+<File Name="AsyncEventHandler.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimingAttributes, PeriodicTiming">
+  <Fragment>
+package saito.sashimi.realtime;
+
+public abstract class AsyncEventHandler {
+	protected AsyncEvent m_AttachedEvent = null;
+	
+	/* This method holds the logic which is to be executed when associated instances of 
+	 * AsyncEvent occur. The default logic is null. If this handler was constructed 
+	 * using an instance of Runnable as an argument to the constructor, then that 
+	 * instance's run() method will be invoked from this method. This method will be 
+	 * invoked repeatedly while fireCount is greater than zero. All throwables from (or 
+	 * propagated through) handleAsyncEvent  are caught, a stack trace is printed and 
+	 * execution continues as if handleAsyncEvent had returned normally.
+	 */
+	protected abstract void handleAsyncEvent(); 
+	public boolean hasAsyncEventAttached() {
+		return m_AttachedEvent != null;
+	}
+	
+	public void attachAsyncEvent(AsyncEvent event) {
+		m_AttachedEvent = event;
+	}
+	
+	public void deattachAsyncEvent() {
+		m_AttachedEvent = null;
+	}
+}
+  </Fragment>
+</File>

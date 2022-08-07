@@ -1,0 +1,77 @@
+<File Name="Timer.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimeBoundedActivity, Jitter, DataFreshness, TolaratedDelay, ClockDrift">
+  <Fragment>
+package saito.sashimi.realtime;
+
+import saito.sashimi.FemtoJavaInterruptSystem;
+import saito.sashimi.FemtoJavaTimer;
+import saito.sashimi.TimerInterface;
+
+public abstract class Timer implements TimerInterface {
+
+protected static int activeTimer = -1;
+protected static Timer timerObject;
+
+protected boolean m_isEnabled = true;
+protected boolean m_isRunning = false;
+protected HighResolutionTime m_delay;
+protected int m_ID = -1;
+
+public Timer( HighResolutionTime hrtimeDelay, int id )
+{
+	m_delay = hrtimeDelay;
+	m_ID = id;
+}
+abstract protected void runTimer();
+abstract protected void executeTimer();
+public void disable()
+{
+    m_isEnabled = false;
+    FemtoJavaInterruptSystem.enable(0x40);
+}
+public void enable()
+{
+	int aux = FemtoJavaInterruptSystem.getEnableWord();
+	m_isEnabled = true;
+	if ((aux &amp; 0x40) == 0x40)
+		aux &amp;= 0x3F;
+	if ((aux &amp; 0x2A) != 0x2A)
+		aux |= 0x2A;
+	FemtoJavaInterruptSystem.setEnable(aux);
+}
+public void start()
+{
+	if (activeTimer == -1)
+	{
+		activeTimer = m_ID;
+		//timerObjects[activeTimer] = this;
+		timerObject = this;
+		enable();
+		m_isRunning = true;
+		FemtoJavaTimer.setTimer1(m_delay.getMilliseconds());
+		FemtoJavaTimer.startTimer1();
+	}
+}
+public void stop()
+{
+	FemtoJavaTimer.stopTimer1();
+    m_isRunning = false;
+    activeTimer = -1;
+}
+
+public void tf0Method() {
+	FemtoJavaInterruptSystem.enable(0x40);
+	FemtoJavaTimer.stopTimer0();
+	Scheduler.getDefaultScheduler().runScheduler();
+}
+		
+public void tf1Method() {
+	if (activeTimer != -1)
+	{
+		//timerObjects[activeTimer].executeTimer();
+		timerObject.executeTimer();
+	}
+}
+}
+  </Fragment>
+</File>

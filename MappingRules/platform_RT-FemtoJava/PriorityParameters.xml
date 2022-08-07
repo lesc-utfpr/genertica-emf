@@ -1,0 +1,21 @@
+<File Name="PriorityParameters.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="SchedulingSupport, TimingAttributes">
+  <Fragment>
+package saito.sashimi.realtime;
+public class PriorityParameters extends SchedulingParameters {
+private int m_iPriority;
+public PriorityParameters( int iPriority )
+{
+	m_iPriority = iPriority;
+}
+public int getPriority()
+{
+	return m_iPriority;
+}
+public void setPriority( int iPriority ) throws IllegalArgumentException
+{
+	m_iPriority = iPriority;
+}
+}
+  </Fragment>
+</File>

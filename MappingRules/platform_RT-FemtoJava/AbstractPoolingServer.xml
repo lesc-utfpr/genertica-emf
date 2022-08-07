@@ -1,0 +1,25 @@
+<File Name="AbstractPoolingServer.java" OutputDirectory="saito.sashimi.realtime" 
+      Aspects="TimingAttributes, PeriodicTiming">
+  <Fragment>
+package saito.sashimi.realtime;
+import saito.sashimi.FemtoJavaInterruptSystem;
+import saito.sashimi.FemtoJavaTimer;
+public abstract class AbstractPoolingServer extends RealtimeThread {
+	
+	public AbstractPoolingServer() {
+		super();
+	}
+	public AbstractPoolingServer(SchedulingParameters schedulingParameters) {
+		super(schedulingParameters);
+	}
+	public AbstractPoolingServer(SchedulingParameters schedulingParameters,
+			ReleaseParameters releaseParameters) {
+		super(schedulingParameters, releaseParameters);
+	}	
+	public abstract void addAperiodicTaskToExecute(RealtimeThread task);
+	public abstract void setupPoolServerBubgetTimer();
+	protected abstract void calculeRemainingBudget();
+	protected abstract void replanishBudget();
+}
+  </Fragment>
+</File>
