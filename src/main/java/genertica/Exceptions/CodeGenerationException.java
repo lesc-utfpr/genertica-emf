@@ -1,4 +1,4 @@
-package CodeGenerationTool.Exceptions;
+package genertica.Exceptions;
 
 public class CodeGenerationException extends Exception {
 	

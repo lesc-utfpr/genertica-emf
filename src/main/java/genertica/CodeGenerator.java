@@ -1,4 +1,4 @@
-package CodeGenerationTool;
+package genertica;
 
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -9,7 +9,7 @@ import javax.swing.JOptionPane;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 
-import CodeGenerationTool.Exceptions.CodeGenerationException;
+import genertica.Exceptions.CodeGenerationException;
 import dercs.util.OutputLog;
 
 import dercs.DERCSHelper;

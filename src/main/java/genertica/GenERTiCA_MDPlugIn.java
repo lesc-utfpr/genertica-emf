@@ -1,4 +1,4 @@
-package CodeGenerationTool;
+package genertica;
 
 import com.nomagic.actions.AMConfigurator;
 import com.nomagic.actions.ActionsCategory;

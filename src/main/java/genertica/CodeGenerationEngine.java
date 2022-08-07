@@ -1,4 +1,4 @@
-package CodeGenerationTool;
+package genertica;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -14,9 +14,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import CodeGenerationTool.Exceptions.AttributeCGException;
-import CodeGenerationTool.Exceptions.MessageDeclarationCGException;
-import CodeGenerationTool.Exceptions.MessageImplementationCGException;
+import genertica.Exceptions.AttributeCGException;
+import genertica.Exceptions.MessageDeclarationCGException;
+import genertica.Exceptions.MessageImplementationCGException;
 import dercs.util.BinarySearch;
 import dercs.util.OutputLog;
 import dercs.util.QuickSort;

@@ -1,4 +1,4 @@
-package CodeGenerationTool;
+package genertica;
 
 import java.awt.event.ActionEvent;
 import java.util.Iterator;

@@ -1,4 +1,4 @@
-package CodeGenerationTool;
+package genertica;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -8,9 +8,9 @@ import java.io.PrintStream;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
-import CodeGenerationTool.Exceptions.MDProjectNotFound;
-import CodeGenerationTool.Exceptions.MappingRulesFileNotFound;
-import CodeGenerationTool.Exceptions.OutputDirectoryNotFound;
+import genertica.Exceptions.MDProjectNotFound;
+import genertica.Exceptions.MappingRulesFileNotFound;
+import genertica.Exceptions.OutputDirectoryNotFound;
 import dercs.util.OutputLog;
 
 import com.nomagic.magicdraw.core.Application;
@@ -104,7 +104,7 @@ public class GenERTiCA extends CommandLine {
 		System.out.println("                                  version 0.15");
 		System.out.println("----------------------------------------------------------------------------");
 		System.out.println("Usage:");
-		System.out.println("   java CodeGenerationTool.GenERTiCA [source_model mapping_rules output_dir]");
+		System.out.println("   java genertica.GenERTiCA [source_model mapping_rules output_dir]");
 		System.out.println("");
 		System.out.println("where");
 		System.out.println("   source_model   complete path to the file for the Magic Draw project");

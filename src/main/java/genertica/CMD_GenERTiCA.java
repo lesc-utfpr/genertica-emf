@@ -1,4 +1,4 @@
-package CodeGenerationTool;
+package genertica;
 
 import java.io.File;
 import java.io.IOException;

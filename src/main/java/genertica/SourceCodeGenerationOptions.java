@@ -1,4 +1,4 @@
-package CodeGenerationTool;
+package genertica;
 
 /**
  * This class represent the option used by the code generation tool in order

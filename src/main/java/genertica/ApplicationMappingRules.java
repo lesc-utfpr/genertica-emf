@@ -1,4 +1,4 @@
-package CodeGenerationTool;
+package genertica;
 
 import java.util.ArrayList;
 import java.util.Iterator;
