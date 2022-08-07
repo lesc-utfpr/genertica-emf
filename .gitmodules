@@ -1,0 +1,3 @@
+[submodule "dercs-emf"]
+	path = dercs-emf
+	url = git@github.com:lesc-utfpr/dercs-emf.git
