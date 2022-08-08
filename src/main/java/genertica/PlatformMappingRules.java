@@ -7,12 +7,12 @@ import java.util.Iterator;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
-import dercs.util.OutputLog;
 
 public class PlatformMappingRules {
 
@@ -22,11 +22,11 @@ public class PlatformMappingRules {
 	private ArrayList<PlatformConfigurationFileSpecification> m_Files = new ArrayList<PlatformConfigurationFileSpecification>();
 	// indicate that the scripts that configure the platform were successful loaded
 	private boolean ScriptsLoaded;
-	protected OutputLog m_Log;
+	protected Logger m_Log;
 	private String m_MappingRulesFileDir;
 	
-	public PlatformMappingRules(String mappingRulesFileDir, Node platformMappingRules, OutputLog log) {
-		m_Log = log;
+	public PlatformMappingRules(String mappingRulesFileDir, Node platformMappingRules) {
+		m_Log = LoggerFactory.getLogger("GenERTiCA");
 		m_MappingRulesFileDir = mappingRulesFileDir;
 		ScriptsLoaded = loadScripts(platformMappingRules);
 	}
@@ -65,8 +65,8 @@ public class PlatformMappingRules {
 							}
 						} 
 						catch (Exception e) {
-							m_Log.println(CodeGenerator.CODE_GENERATION_ERROR_1012 + " [" + fileToInclude + "]", false);
-							m_Log.println("\t"+e.getMessage(), false);
+							m_Log.info(CodeGenerator.CODE_GENERATION_ERROR_1012 + " [" + fileToInclude + "]");
+							m_Log.info("\t"+e.getMessage());
 						}
 					}
 				}

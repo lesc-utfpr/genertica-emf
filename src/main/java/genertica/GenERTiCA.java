@@ -2,25 +2,10 @@ package genertica;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintStream;
 
-import javax.swing.JFileChooser;
-import javax.swing.JOptionPane;
-
-import genertica.Exceptions.MDProjectNotFound;
-import genertica.Exceptions.MappingRulesFileNotFound;
-import genertica.Exceptions.OutputDirectoryNotFound;
-import dercs.util.OutputLog;
-
-import com.nomagic.magicdraw.core.Application;
-import com.nomagic.magicdraw.core.Project;
-import com.nomagic.magicdraw.core.project.ProjectDescriptorsFactory;
-import com.nomagic.runtime.ApplicationExitedException;
-import com.nomagic.magicdraw.commandline.CommandLine;
-
-import dercs.MDOA_DERCSLoader;
 import dercs.Model;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is the main class og GenERTiCA. Basically it contains just a method
@@ -28,9 +13,9 @@ import dercs.Model;
  * @author marcow
  *
  */
-public class GenERTiCA extends CommandLine {
+public class GenERTiCA /*extends CommandLine*/ {
 	
-	public static OutputLog Log;
+	public static Logger LOGGER;
 	
 //	/**
 //	 * It just starts Magic Draw tool in batch mode.
@@ -69,27 +54,27 @@ public class GenERTiCA extends CommandLine {
 //				// loads Magic Draw
 //				Log.print("Loading Magic Draw ... ", true);
 //				app.start(false, true, false, args, null);
-//				Log.println("OK", false);
+//				Log.info("OK", false);
 //
 //				// loads the project
 //				Log.print("Loading Project " + args[0] + " ... ", true);
 //				app.getProjectsManager().loadProject(
 //						ProjectDescriptorsFactory.createProjectDescriptor(
 //								new File(args[0]).toURI()), true);
-//				Log.println("OK", false);
+//				Log.info("OK", false);
 //				
 //				// load DERCS model from Project
-//				Log.println("Loading DERCS ... ", true);
+//				Log.info("Loading DERCS ... ", true);
 //				MDOA_DERCSLoader dercsLoader = new MDOA_DERCSLoader(app.getProjectsManager().getActiveProject(), Log);
 //				Model dercsModel = dercsLoader.loadDERCSModel();
-//				Log.println("DERCS loaded successfull.", true);
+//				Log.info("DERCS loaded successfull.", true);
 //
-//				Log.println("Code generated at " + args[2], true);
+//				Log.info("Code generated at " + args[2], true);
 //				
 //				// shutdown Magic Draw
 //				Log.print("Shutdown Magic Draw ... ", true);
 //				app.shutdown();
-//				Log.println("OK", false);
+//				Log.info("OK", false);
 //			}
 //			catch (Exception e)
 //			{
@@ -118,23 +103,23 @@ public class GenERTiCA extends CommandLine {
 	}
 	
 	public static void loadMagicDraw(String[] args) throws Exception {
-		Log.print("Loading Magic Draw ... ", true);
-		try{
-			com.nomagic.magicdraw.core.Application.getInstance().start(true, false, false, args, null);
-			Log.println("OK", false);
-		}
-		catch (ApplicationExitedException e)
-		{
-			e.printStackTrace();
-		}
+		LOGGER.info("Loading Magic Draw ... ");
+//		try{
+//			com.nomagic.magicdraw.core.Application.getInstance().start(true, false, false, args, null);
+//			LOGGER.info("OK", false);
+//		}
+//		catch (ApplicationExitedException e)
+//		{
+//			e.printStackTrace();
+//		}
 	}
 	
 	public static void executeCodeGeneration(String srcModel, String mappingRules, String outputDir) {
 		try 
 		{
-			if (GenERTiCA.Log == null)
-				GenERTiCA.Log = new OutputLog(null);
-			GenERTiCA.Log.createLogFile(outputDir + "CodeGeneration.LOG");
+			if (GenERTiCA.LOGGER == null)
+				LOGGER = LoggerFactory.getLogger("GenERTiCA");
+			//GenERTiCA.LOGGER.createLogFile(outputDir + "CodeGeneration.LOG");
 			
 			// validating parameters
 			File tmp = new File(srcModel);
@@ -151,36 +136,36 @@ public class GenERTiCA extends CommandLine {
 				outputDir += "/";
 
 			// load DERCS model from file
-			GenERTiCA.Log.println("Loading DERCS ... ", true);
-			Model dercsModel = Model.loadFrom(srcModel);
-			GenERTiCA.Log.println("DERCS loaded successfull.", true);
+			GenERTiCA.LOGGER.info("Loading DERCS ... ", true);
+			Model dercsModel = null;//Model.loadFrom(srcModel);
+			GenERTiCA.LOGGER.info("DERCS loaded successfull.", true);
 
 			// generating code
-			GenERTiCA.Log.println("DERCS starting code generation ... ", true);
-			CodeGenerationEngine cge = new CodeGenerationEngine(dercsModel, GenERTiCA.Log);
+			GenERTiCA.LOGGER.info("DERCS starting code generation ... ", true);
+			CodeGenerationEngine cge = new CodeGenerationEngine(dercsModel);
 			cge.execute(mappingRules, outputDir);
 
 			// code generation process was performed successfully
-			GenERTiCA.Log.println("Code generated at " + outputDir, true);
+			GenERTiCA.LOGGER.info("Code generated at " + outputDir, true);
 
 		} catch (Exception e) {
 			StackTraceElement[] stack = e.getStackTrace(); 
 			String s = "";
 			for(int i=0; (i < stack.length) && (stack[i].toString().indexOf("actionPerformed") == -1); i++)
 				s += "\n"+stack[i].toString();
-			GenERTiCA.Log.println("\n---------\n" + e.getClass().getName() + 
+			GenERTiCA.LOGGER.info("\n---------\n" + e.getClass().getName() + 
 					": \n" + e.getMessage() + "\n\nStack trace:" + s, false);
 		}
 	}
 
 	public static void main(String[] args) {
-		Log = new OutputLog(null);
+		LOGGER = LoggerFactory.getLogger("GenERTiCA");
 		try
 		{
 			if ((args.length == 1) && (args[0].equals("md"))) {
 				args[0] = "";
 				//loadMagicDraw(args);
-				new GenERTiCA().launch(args);
+				new GenERTiCA();//.launch(args);
 			}
 			else if (args.length == 3) {
 				executeCodeGeneration(args[0], args[1], args[2]);
@@ -191,13 +176,13 @@ public class GenERTiCA extends CommandLine {
 		}
 		catch (Exception e)
 		{
-			Log.printStack(e);
+			LOGGER.error("", e);
 		}
 	}
 	
 	protected void run()
     {
-		Log = new OutputLog(null);
+		LOGGER = LoggerFactory.getLogger("GenERTiCA");
 		try {
 			loadMagicDraw(null);
 		}

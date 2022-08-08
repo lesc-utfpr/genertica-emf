@@ -4,8 +4,6 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 
-import javax.swing.JOptionPane;
-
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 

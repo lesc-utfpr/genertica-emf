@@ -2,11 +2,8 @@ package genertica;
 
 import java.io.File;
 
-import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
-import dercs.util.OutputLog;
 
 /**
  * This class represents all VTL script, which are stored into XML files. These
@@ -213,7 +210,6 @@ public class MappingRulesScripts {
 	
 	// Name of the target platform to which the code will be generated
 	private String Name = "";
-	protected OutputLog m_Log;
 	
 	// scripts of parts of the XML mapping rules files
 	private ApplicationMappingRules ApplicationSW;
@@ -223,9 +219,8 @@ public class MappingRulesScripts {
 	private boolean ScriptsLoaded = false;
 	private String m_MappingRulesFileDir;
 	
-	public MappingRulesScripts(String mappingRulesFileDir, String name, Node XMLPlatformMappingRules, OutputLog log) {
+	public MappingRulesScripts(String mappingRulesFileDir, String name, Node XMLPlatformMappingRules) {
 		Name = name;
-		m_Log = log;
 		m_MappingRulesFileDir = mappingRulesFileDir;
 		if (!m_MappingRulesFileDir.endsWith(File.separator))
 			m_MappingRulesFileDir += File.separator;
@@ -247,10 +242,10 @@ public class MappingRulesScripts {
 				NodeList tmpLst = childElements.item(i).getChildNodes();
 				for(int j=0; j < tmpLst.getLength(); j++) {
 					if (tmpLst.item(j).getNodeName().compareTo(SOFTWARE) == 0) {
-						PlatformSW = new PlatformMappingRules(m_MappingRulesFileDir, tmpLst.item(j), m_Log);
+						PlatformSW = new PlatformMappingRules(m_MappingRulesFileDir, tmpLst.item(j));
 					}
 					else if (tmpLst.item(j).getNodeName().compareTo(HARDWARE) == 0) {
-						PlatformHW = new PlatformMappingRules(m_MappingRulesFileDir, tmpLst.item(j), m_Log);
+						PlatformHW = new PlatformMappingRules(m_MappingRulesFileDir, tmpLst.item(j));
 					}
 				}
 			}

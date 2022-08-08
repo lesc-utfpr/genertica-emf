@@ -1,20 +1,9 @@
 package genertica;
 
 import java.awt.event.ActionEvent;
-import java.util.Iterator;
 
-import dercs.util.OutputLog;
-
-import com.nomagic.magicdraw.actions.MDAction;
-import com.nomagic.magicdraw.core.Application;
-import com.nomagic.magicdraw.core.Project;
-
-import dercs.MDOA_DERCSLoader;
 import dercs.Model;
-import dercs.structure.Class;
-import dercs.structure.Method;
-import dercs.structure.runtime.Node;
-import dercs.structure.runtime.Object;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 
@@ -25,27 +14,24 @@ import javax.swing.*;
  * @author Marco Aurelio Wehrmeister
  *
  */
-public class MainMenuAction extends MDAction {
+public class MainMenuAction /*extends MDAction*/ {
 	
 	/**
 	 * Overrides the default constructor just to compile the class.
 	 * @param id   - Unique identification for the action
-	 * @param name - Name for the action  
-	 * @see com.nomagic.magicdraw.actions.MDAction#actionPerformed(java.awt.event.ActionEvent)
+	 * @param name - Name for the action
 	 */
 	public MainMenuAction(String id, String name) {
-		super(id, name, null, null);
+		/*super(id, name, null, null);*/
 	}
 
 	/**
 	 * This method calculates the AOP metrics, saving them into a file.
-	 * @see com.nomagic.magicdraw.actions.MDAction#actionPerformed(java.awt.event.ActionEvent)
 	 */
-	@Override
 	public void actionPerformed(ActionEvent arg0) {
 		// the metrics can be calculated only wheter a project is active
-		Project activeProject = Application.getInstance().getProjectsManager().getActiveProject();
-		if (activeProject != null) {
+//		Project activeProject = Application.getInstance().getProjectsManager().getActiveProject();
+//		if (activeProject != null) {
 			// open a dialog to ask the mapping rules XML file
 			JFileChooser chooser = new JFileChooser();
 			chooser.setDialogTitle("Choose the mapping rules XML file");
@@ -64,21 +50,21 @@ public class MainMenuAction extends MDAction {
 						if (!saveTo.endsWith("/")) 
 							saveTo += "/";
 						
-						if (GenERTiCA.Log == null)
-							GenERTiCA.Log = new OutputLog(null);
-						GenERTiCA.Log.createLogFile(saveTo + "CodeGeneration.LOG");
+						if (GenERTiCA.LOGGER == null)
+							GenERTiCA.LOGGER = LoggerFactory.getLogger("GenERTiCA");
+//						GenERTiCA.LOGGER.createLogFile(saveTo + "CodeGeneration.LOG");
 						
 						// load DERCS model from Project
-						GenERTiCA.Log.println("Loading DERCS ... ", true);
-						MDOA_DERCSLoader dercsLoader = new MDOA_DERCSLoader(activeProject, GenERTiCA.Log);
-						Model dercsModel = dercsLoader.loadDERCSModel();
-						GenERTiCA.Log.println("DERCS loaded successfull.", true);
+						GenERTiCA.LOGGER.info("Loading DERCS ... ");
+						//MDOA_DERCSLoader dercsLoader = new MDOA_DERCSLoader(activeProject, GenERTiCA.LOGGER);
+						Model dercsModel = null;//dercsLoader.loadDERCSModel();
+						GenERTiCA.LOGGER.info("DERCS loaded successfull.");
 						
 						// allowing model interchagen among tools
 						// this has been made for the umlVM project 
-						GenERTiCA.Log.println("Saving loaded model as \"" + saveTo + "dercs_model.bin\"...", true);
-						dercsModel.saveTo(saveTo + "dercs_model.bin");
-						GenERTiCA.Log.println("Model saved.", true);
+						GenERTiCA.LOGGER.info("Saving loaded model as \"" + saveTo + "dercs_model.bin\"...");
+						//dercsModel.saveTo(saveTo + "dercs_model.bin");
+						GenERTiCA.LOGGER.info("Model saved.");
 						
 						// ******** DEBUG ************
 //						GenERTiCA.Log.println("DEBUG: Objects found within de UML model", false);
@@ -118,16 +104,16 @@ public class MainMenuAction extends MDAction {
 						// ******** DEBUG ************
 						
 						// TODO CG-000 complete code generation
-						GenERTiCA.Log.println("DERCS starting code generation ... ", true);
-						CodeGenerationEngine cge = new CodeGenerationEngine(dercsModel, GenERTiCA.Log);
+						GenERTiCA.LOGGER.info("DERCS starting code generation ... ");
+						CodeGenerationEngine cge = new CodeGenerationEngine(dercsModel);
 						cge.execute(mappingRulesFileName, saveTo);
 //						GenERTiCA.Log.println("OK", false);
 
 						// code generation process was performed successfully
-						GenERTiCA.Log.println("Code generated at " + saveTo, true);
+						GenERTiCA.LOGGER.info("Code generated at " + saveTo);
 						// force the release of memory after the code generation
 						dercsModel = null;
-						dercsLoader = null;
+//						dercsLoader = null;
 						cge = null;
 						JOptionPane.showMessageDialog(null, "Done... code generated at " + saveTo);
 					} catch (Exception e) {
@@ -136,15 +122,15 @@ public class MainMenuAction extends MDAction {
 						for(int i=0; (i < stack.length) && (stack[i].toString().indexOf("actionPerformed") == -1); i++) {
 							s += "\n"+stack[i].toString();
 						}
-						GenERTiCA.Log.println("\n---------\n" + e.getClass().getName() + 
-								": \n" + e.getMessage() + "\n\nStack trace:" + s, false);
+						GenERTiCA.LOGGER.info("\n---------\n" + e.getClass().getName() +
+								": \n" + e.getMessage() + "\n\nStack trace:" + s);
 						JOptionPane.showMessageDialog(null, "ERROR (" + e.getClass().getName() + ") :\n" + e.getMessage() + "\n--------" + s);
 					}
 				}
 			}
-		}
-		else
-			JOptionPane.showMessageDialog(null, "There is none active project.");
+//		}
+//		else
+//			JOptionPane.showMessageDialog(null, "There is none active project.");
 	}
 	
 	/**
@@ -152,9 +138,8 @@ public class MainMenuAction extends MDAction {
 	 * Metrics option should be enable only if a project is loaded into Magic
 	 * Draw environment.
 	 * */
-	@Override
 	public void updateState() {
-		setEnabled(Application.getInstance().getProjectsManager().getProjects().size() > 0);
+//		setEnabled(Application.getInstance().getProjectsManager().getProjects().size() > 0);
 	}
 
 }

@@ -3,23 +3,11 @@ package genertica;
 import java.io.File;
 import java.io.IOException;
 
-import javax.swing.JOptionPane;
-
-import com.nomagic.magicdraw.commandline.CommandLine;
-import com.nomagic.magicdraw.core.Application;
-import com.nomagic.magicdraw.core.Project;
-import com.nomagic.magicdraw.core.project.ProjectDescriptor;
-import com.nomagic.magicdraw.core.project.ProjectDescriptorsFactory;
-import com.nomagic.magicdraw.core.project.ProjectsManager;
-import com.nomagic.magicdraw.export.image.ImageExporter;
-import com.nomagic.magicdraw.uml.symbols.DiagramPresentationElement;
-
-import dercs.MDOA_DERCSLoader;
 import dercs.Model;
-import dercs.util.OutputLog;
+import org.slf4j.LoggerFactory;
 
 
-public class CMD_GenERTiCA extends CommandLine {
+public class CMD_GenERTiCA /*extends CommandLine*/ {
 
 	private static final String PROJECT = "project_file";
 	private static final String MAPPING_RULES = "mapping";
@@ -128,24 +116,24 @@ public class CMD_GenERTiCA extends CommandLine {
 		System.out.println("***********************************************");
 		
 		final File file = new File(mProjectFile);
-		final ProjectDescriptor projectDescriptor = ProjectDescriptorsFactory.createProjectDescriptor(file.toURI());
-		if (projectDescriptor == null)
-		{
-			System.out.println("Project descriptor was not created for " + file.getAbsolutePath());
-			return -1;
-		}
-		final ProjectsManager projectsManager = Application.getInstance().getProjectsManager();
-		projectsManager.loadProject(projectDescriptor, true);
-		final Project project = projectsManager.getActiveProject();
-		if (project == null)
-		{
-			System.out.println("Project " + file.getAbsolutePath() + " was not loaded.");
-			return -1;
-		}
+//		final ProjectDescriptor projectDescriptor = ProjectDescriptorsFactory.createProjectDescriptor(file.toURI());
+//		if (projectDescriptor == null)
+//		{
+//			System.out.println("Project descriptor was not created for " + file.getAbsolutePath());
+//			return -1;
+//		}
+//		final ProjectsManager projectsManager = Application.getInstance().getProjectsManager();
+//		projectsManager.loadProject(projectDescriptor, true);
+//		final Project project = projectsManager.getActiveProject();
+//		if (project == null)
+//		{
+//			System.out.println("Project " + file.getAbsolutePath() + " was not loaded.");
+//			return -1;
+//		}
 		
 		try {
 			//SaveAllImagesSVG(project);
-			performCodeGeneration(project);
+			//performCodeGeneration(project);
 
 			System.out.println("***********************************************");
 			System.out.println("*   Code generation completed successfully!   *");
@@ -161,22 +149,22 @@ public class CMD_GenERTiCA extends CommandLine {
 	/*
 	 * This method allows the automatic generation of SVG images from all diagrams. 
 	 */
-	protected void SaveAllImagesSVG(final Project project) {
-		for (DiagramPresentationElement diagram : project.getDiagrams())
-		{
-			final File diagramFile = new File(mDestinationDir, diagram.getHumanName() + diagram.getID() + ".svg");
-			try
-			{
-				ImageExporter.export(diagram, ImageExporter.SVG, diagramFile);
-			}
-			catch (IOException e)
-			{
-				e.printStackTrace();
-			}
-		}
-	}
+//	protected void SaveAllImagesSVG(final Project project) {
+//		for (DiagramPresentationElement diagram : project.getDiagrams())
+//		{
+//			final File diagramFile = new File(mDestinationDir, diagram.getHumanName() + diagram.getID() + ".svg");
+//			try
+//			{
+//				ImageExporter.export(diagram, ImageExporter.SVG, diagramFile);
+//			}
+//			catch (IOException e)
+//			{
+//				e.printStackTrace();
+//			}
+//		}
+//	}
 	
-	protected void performCodeGeneration(final Project activeProject) throws Exception {
+	protected void performCodeGeneration(/*final Project activeProject*/) throws Exception {
 		// save complete file path to the mapping rules XML file
 		String mappingRulesFileName = mMappingRules;
 		try {
@@ -184,34 +172,34 @@ public class CMD_GenERTiCA extends CommandLine {
 			if (!saveTo.endsWith("/")) 
 				saveTo += "/";
 			
-			if (GenERTiCA.Log == null)
-				GenERTiCA.Log = new OutputLog(null);
-			GenERTiCA.Log.createLogFile(saveTo + "CodeGeneration.LOG");
+			if (GenERTiCA.LOGGER == null)
+				GenERTiCA.LOGGER = LoggerFactory.getLogger("GenERTiCA");
+//			GenERTiCA.LOGGER.createLogFile(saveTo + "CodeGeneration.LOG");
 			
 			// load DERCS model from Project
-			GenERTiCA.Log.println("Loading DERCS ... ", true);
-			MDOA_DERCSLoader dercsLoader = new MDOA_DERCSLoader(activeProject, GenERTiCA.Log);
-			Model dercsModel = dercsLoader.loadDERCSModel();
-			GenERTiCA.Log.println("DERCS loaded successfull.", true);
+			GenERTiCA.LOGGER.info("Loading DERCS ... ");
+			//MDOA_DERCSLoader dercsLoader = new MDOA_DERCSLoader(activeProject, GenERTiCA.LOGGER);
+			Model dercsModel = null;//dercsLoader.loadDERCSModel();
+			GenERTiCA.LOGGER.info("DERCS loaded successfull.");
 			
 			// allowing model interchagen among tools
 			// this has been made for the umlVM project
 			String binFileName = (new File(mProjectFile)).getName().replace("mdzip", "bin");
-			GenERTiCA.Log.println("Saving loaded model as \"" + saveTo + "binFileName\"...", true);
-			dercsModel.saveTo(saveTo + binFileName);
-			GenERTiCA.Log.println("Model saved.", true);
+			GenERTiCA.LOGGER.info("Saving loaded model as \"" + saveTo + "binFileName\"...");
+			//dercsModel.saveTo(saveTo + binFileName);
+			GenERTiCA.LOGGER.info("Model saved.");
 						
 			// TODO CG-000 complete code generation
-			GenERTiCA.Log.println("DERCS starting code generation ... ", true);
-			CodeGenerationEngine cge = new CodeGenerationEngine(dercsModel, GenERTiCA.Log);
+			GenERTiCA.LOGGER.info("DERCS starting code generation ... ");
+			CodeGenerationEngine cge = new CodeGenerationEngine(dercsModel);
 			cge.execute(mappingRulesFileName, saveTo);
 //			GenERTiCA.Log.println("OK", false);
 
 			// code generation process was performed successfully
-			GenERTiCA.Log.println("Code generated at " + saveTo, true);
+			GenERTiCA.LOGGER.info("Code generated at " + saveTo);
 			// force the release of memory after the code generation
-			dercsModel = null;
-			dercsLoader = null;
+//			dercsModel = null;
+//			dercsLoader = null;
 			cge = null;
 		} catch (Exception e) {
 			StackTraceElement[] stack = e.getStackTrace(); 
@@ -219,14 +207,12 @@ public class CMD_GenERTiCA extends CommandLine {
 			for(int i=0; (i < stack.length) && (stack[i].toString().indexOf("actionPerformed") == -1); i++) {
 				s += "\n"+stack[i].toString();
 			}
-			GenERTiCA.Log.println("\n---------\n" + e.getClass().getName() + 
-					": \n" + e.getMessage() + "\n\nStack trace:" + s, false);
+			GenERTiCA.LOGGER.info("\n---------\n" + e.getClass().getName() +
+					": \n" + e.getMessage() + "\n\nStack trace:" + s);
 			throw e;
 		}		
 	}
-	
 
-	@Override
 	protected void run() {
 		// load project
 		System.out.print("++++++++++++++++++ Nothing to do here +++++++++++++++++");

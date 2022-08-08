@@ -47,7 +47,7 @@ public class SourceCode {
 
 	/**
 	 * Add a declaration of a class.
-	 * @param classesDeclaration New class declaration to be added.
+	 * @param classDeclaration New class declaration to be added.
 	 */
 	public void addClassDeclaration(String classDeclaration) {
 		ClassesDeclaration.add(classDeclaration);

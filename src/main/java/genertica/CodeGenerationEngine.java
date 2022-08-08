@@ -10,6 +10,8 @@ import java.util.Iterator;
 
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -17,15 +19,13 @@ import org.w3c.dom.NodeList;
 import genertica.Exceptions.AttributeCGException;
 import genertica.Exceptions.MessageDeclarationCGException;
 import genertica.Exceptions.MessageImplementationCGException;
-import dercs.util.BinarySearch;
-import dercs.util.OutputLog;
-import dercs.util.QuickSort;
+import genertica.util.BinarySearch;
+import genertica.util.QuickSort;
 
-import javax.swing.JOptionPane;
 import javax.xml.parsers.*;
 
 import dercs.DERCSFactory;
-import dercs.DERCSHelper;
+import genertica.util.DERCSHelper;
 import dercs.Model;
 import dercs.AO.Aspect;
 import dercs.AO.AspectAdaptation;
@@ -89,7 +89,7 @@ public class CodeGenerationEngine {
 	// Indicate a referenced class from the references list
 	private Class ReferencedClass;
 	// Logging system
-	protected OutputLog m_Log;
+	protected Logger LOGGER;
 	
 	// Indicate the source code files for the class which are been analysed.
 	// It can be a declaration (e.g. *.h) or an implementation file (e.g. *.c, *.java)
@@ -120,10 +120,9 @@ public class CodeGenerationEngine {
 	 * a UML model
 	 * @throws Exception Velocity related exceptions
 	 */
-	public CodeGenerationEngine(Model dercsModel, OutputLog log) throws Exception {
+	public CodeGenerationEngine(Model dercsModel) throws Exception {
 		DERCSModel = dercsModel;
-		m_Log = log;
-		
+		LOGGER = LoggerFactory.getLogger("GenERTiCA");
 		Velocity.init();
 		createContext();
 	}
@@ -169,16 +168,16 @@ public class CodeGenerationEngine {
 		catch (Exception e) {
 			// the JVM does not support inserting nodes from an external XML file.
 			// the parsing of XML tree should be aware to this kind of node.
-			m_Log.println("\tWARNING: JVM is not aware of <xi:include>. " + 
-					  "The inclusion of such files are done by GenERTiCA code.", false);
+			LOGGER.info("\tWARNING: JVM is not aware of <xi:include>. " +
+					  "The inclusion of such files are done by GenERTiCA code.");
 		}
 		try {
 			DocumentBuilder builder = factory.newDocumentBuilder();
 			mappingRulesDoc = builder.parse(fileName);
 		} 
 		catch (Exception e) {
-			m_Log.println(CodeGenerator.CODE_GENERATION_ERROR_1013 + " [" + fileName + "]", false);
-			m_Log.println("\t"+e.getMessage(), false);
+			LOGGER.info(CodeGenerator.CODE_GENERATION_ERROR_1013 + " [" + fileName + "]");
+			LOGGER.info("\t"+e.getMessage());
 		}
 		
 		if (mappingRulesDoc != null) {
@@ -189,7 +188,7 @@ public class CodeGenerationEngine {
 				if (platforms.item(i).getNodeType() == Node.ELEMENT_NODE) {
 					File tmp = new File(fileName);
 					PlatformMappingRules.add(new MappingRulesScripts(tmp.getParent(), 
-							platforms.item(i).getNodeName(), platforms.item(i), m_Log));
+							platforms.item(i).getNodeName(), platforms.item(i)));
 				}
 			}
 		}
@@ -222,19 +221,19 @@ public class CodeGenerationEngine {
 			MappingRulesScripts mrs = itmr.next();
 			
 			if (mrs.scriptsSuccessfullLoaded()) {
-				m_Log.println("Generating code for the platform: " + mrs.getName(), true);
+				LOGGER.info("Generating code for the platform: " + mrs.getName());
 				//****************************************************************
 				//****          Generating    APPLICATION    code              ***
 				//****************************************************************
-				m_Log.println("Generating code for the APPLICATION ... ", true);
+				LOGGER.info("Generating code for the APPLICATION ... ");
 				
 				// iterate the classes list
 				for(Iterator<Class> itc=DERCSModel.getClasses().iterator(); itc.hasNext(); ) {
 					ClassBeenAnalysed = itc.next();
-					m_Log.println("\t" + ClassBeenAnalysed.getName(), false);
+					LOGGER.info("\t" + ClassBeenAnalysed.getName());
 					
-					CodeGenerator appCodeGenSW = new CodeGenerator(mrs.getApplicationSW(), velocityContext, m_Log);
-					CodeGenerator appCodeGenHW = new CodeGenerator(mrs.getApplicationHW(), velocityContext, m_Log);
+					CodeGenerator appCodeGenSW = new CodeGenerator(mrs.getApplicationSW(), velocityContext);
+					CodeGenerator appCodeGenHW = new CodeGenerator(mrs.getApplicationHW(), velocityContext);
 					// setup context
 					velocityContext.put(CLASS, ClassBeenAnalysed);
 					
@@ -253,11 +252,11 @@ public class CodeGenerationEngine {
 					//         code generation have been implemented as two call for the same method 
 					//         instead of one DERCS model pass and two code fragments generation.
 					
-					m_Log.println("\t\t Attributes:", false);
+					LOGGER.info("\t\t Attributes:");
 					// pass through attributes list
-					for(Iterator<Attribute> ita=ClassBeenAnalysed.getAttributesIterator(); ita.hasNext();) {
+					for(Iterator<Attribute> ita=ClassBeenAnalysed.getAttributes().iterator(); ita.hasNext();) {
 						Attribute attr = ita.next();
-						m_Log.println("\t\t\t" + attr.getName(), false);
+						LOGGER.info("\t\t\t" + attr.getName());
 						// list with all pointcuts which select the attribute analyzed
 						pointcuts = getPointcutsSelecting(attr);
 						if (mrs.getApplicationSW().scriptsSuccessfullLoaded()) {
@@ -276,12 +275,12 @@ public class CodeGenerationEngine {
 						}
 					}
 					
-					m_Log.println("\t\t Methods:", false);
+					LOGGER.info("\t\t Methods:");
 					pointcuts = null;
 					// pass through methods list
-					for(Iterator<Method> itm=ClassBeenAnalysed.getMethodsIterator(); itm.hasNext();) {
+					for(Iterator<Method> itm=ClassBeenAnalysed.getMethods().iterator(); itm.hasNext();) {
 						Method mth = itm.next();
-						m_Log.println("\t\t\t" + mth.toString(), false);
+						LOGGER.info("\t\t\t" + mth.toString());
 						// list with all pointcuts wich select the method analyzed
 						pointcuts = getPointcutsSelecting(mth);
 						
@@ -297,7 +296,7 @@ public class CodeGenerationEngine {
 									exclusiveAddAll(pointcuts, tmp);
 							}
 							
-							for(Iterator<BehavioralElement> ita=mth.getTriggeredBehavior().getBehavioralElementsIterator(); ita.hasNext();) {
+							for(Iterator<BehavioralElement> ita=mth.getTriggeredBehavior().getBehavioralElements().iterator(); ita.hasNext();) {
 								BehavioralElement be = ita.next();
 								
 								tmp = getPointcutsSelecting(be);
@@ -316,7 +315,7 @@ public class CodeGenerationEngine {
 								// selected by any of the pointcuts
 								if ((be instanceof AssignmentAction) 
 									&& (((AssignmentAction)be)).isAssignmentOfActionResult()) {
-									tmp = getPointcutsSelecting(((AssignmentAction)be).getAction());
+									tmp = getPointcutsSelecting(((AssignmentAction)be).getResultOfAction());
 									if (tmp != null) {
 										exclusiveAddAll(pointcuts, tmp);
 									}									
@@ -371,20 +370,20 @@ public class CodeGenerationEngine {
 						appCodeGenHW.generateCodeForClassImplementation(ClassBeenAnalysed, pointcuts);
 						mergeCodeFragments(appCodeGenHW, mrs.getApplicationHW(), targetDirName);
 					}
-					m_Log.println("\tDone!\n", false);
+					LOGGER.info("\tDone!\n");
 				}
-				m_Log.println("The application code was generated. ", true);
+				LOGGER.info("The application code was generated. ");
 				//****************************************************************
 				//****      Generating PLATFORM CONFIGURATION code             ***
 				//****************************************************************
-				m_Log.println("Generating code for the PLATFORM CONFIGURATION ... ", true);
+				LOGGER.info("Generating code for the PLATFORM CONFIGURATION ... ");
 				
 				if (mrs.getPlatformSW().scriptsSuccessfullLoaded())
 					generatePlatformConfiguration(mrs.getName(), mrs.getPlatformSW(), targetDirName);
 				if (mrs.getPlatformHW().scriptsSuccessfullLoaded())
 					generatePlatformConfiguration(mrs.getName(), mrs.getPlatformHW(), targetDirName);
 				
-				m_Log.println("The platform configuration was generated. ", true);
+				LOGGER.info("The platform configuration was generated. ");
 			}
 		}
 	}
@@ -428,7 +427,7 @@ public class CodeGenerationEngine {
 					// it has at least one aspect associated with it, 
 					// now the fragments must be checked
 					// Creating the file
-					m_Log.print("\t" + filePath + pcfs.getCompleteFileName() + " ... ", false);
+					LOGGER.info("\t" + filePath + pcfs.getCompleteFileName() + " ... ");
 					FileWriter fw = new FileWriter(dirName + pcfs.getCompleteFileName());
 					for(int i=0; i < fragments.size(); i++) {
 						String aspects = fragmentAspects.get(i).trim();
@@ -454,13 +453,13 @@ public class CodeGenerationEngine {
 						}
 					}
 					fw.flush();
-					m_Log.println("Done!", false);
+					LOGGER.info("Done!");
 				}
 				
 			}
 		} catch (Exception e) {
-			m_Log.println(CodeGenerator.CODE_GENERATION_ERROR_1010 + "[" + platformName + "]", false);
-			m_Log.println("\t"+e.getMessage(), false);
+			LOGGER.info(CodeGenerator.CODE_GENERATION_ERROR_1010 + "[" + platformName + "]");
+			LOGGER.info("\t"+e.getMessage());
 		}
 	}
 	
@@ -548,11 +547,11 @@ public class CodeGenerationEngine {
 			Velocity.evaluate(velocityContext, result, "General Script", script);
 		} catch (Exception e) {
 			// TODO tratamento de erro caso o VTE gere alguma excecao
-			m_Log.println("\n\n\tError-9999: General script error.", false);
-			m_Log.println("\t" + e.getMessage(), false);
-			m_Log.println("\t---------- Script Begin ----------", false);
-			m_Log.println(script, false);
-			m_Log.println("\t----------  Script Begin ----------", false);
+			LOGGER.info("\n\n\tError-9999: General script error.");
+			LOGGER.info("\t" + e.getMessage());
+			LOGGER.info("\t---------- Script Begin ----------");
+			LOGGER.info(script);
+			LOGGER.info("\t----------  Script Begin ----------");
 			return "";
 		}
 		return result.toString();
@@ -603,8 +602,8 @@ public class CodeGenerationEngine {
 			// bubble sort :-(
 			for(int i=pointcuts.size()-1; i > 1; i--) {
 				for(int j=0; j < i; j++) {
-					AspectAdaptation aai = pointcuts.get(j).getAdaptation();
-					AspectAdaptation aaj = pointcuts.get(j+1).getAdaptation();
+					AspectAdaptation aai = pointcuts.get(j).getAspectAdaptation();
+					AspectAdaptation aaj = pointcuts.get(j+1).getAspectAdaptation();
 					if (amr.getAspectAdaptationOrder(aai) > amr.getAspectAdaptationOrder(aaj))
 						Collections.swap(pointcuts, j, j+1);
 				}
@@ -620,7 +619,7 @@ public class CodeGenerationEngine {
 		StringWriter sw = new StringWriter();
 		
 		Velocity.evaluate(velocityContext, sw, "", script);
-//		Log.println(""+sw);
+//		Log.info(""+sw);
 	}
 	
 	/*
@@ -634,11 +633,11 @@ public class CodeGenerationEngine {
 	private void FillWeavingHelperLists() {
 		for(Iterator<Aspect> ita=DERCSModel.getAspects().iterator(); ita.hasNext();) {
 			Aspect aspect = ita.next();
-			for(Iterator<Pointcut> itpc=aspect.getPointcutIterator(); itpc.hasNext();) {
+			for(Iterator<Pointcut> itpc=aspect.getPointcuts().iterator(); itpc.hasNext();) {
 				Pointcut pc = itpc.next();
-				for(Iterator<JoinPoint> itjp=pc.getJoinPointIterator(); itjp.hasNext();) {
+				for(Iterator<JoinPoint> itjp=pc.getJoinPoints().iterator(); itjp.hasNext();) {
 					JoinPoint jp = itjp.next();
-					for(Iterator<BaseElement> itbe=jp.getSelectedElementsIterator(); itbe.hasNext();) {
+					for(Iterator<BaseElement> itbe=jp.getSelectedElements().iterator(); itbe.hasNext();) {
 						BaseElement be = itbe.next();
 						AffectedElements.add(be);
 						RelatedPointcuts.add(pc);
@@ -656,7 +655,7 @@ public class CodeGenerationEngine {
 //			String s = be.getName() + " [" + be.hashCode() + "]";
 //			while (s.length() < 50)
 //				s += " ";
-//			Log.println(i + "\t" + s + "\t" + 
+//			Log.info(i + "\t" + s + "\t" + 
 //					RelatedPointcuts.get(i).getAdaptation().getAspect().getName() + "." +
 //					RelatedPointcuts.get(i).getAdaptation().getName(), false);
 //		}

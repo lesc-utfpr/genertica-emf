@@ -7,8 +7,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import dercs.util.BinarySearch;
-import dercs.util.QuickSort;
+import genertica.util.BinarySearch;
+import genertica.util.QuickSort;
 
 import dercs.AO.Aspect;
 import dercs.AO.AspectAdaptation;
@@ -103,7 +103,7 @@ public class ApplicationMappingRules {
 	
 	/**
 	 * Creates an instance of ApplicationMappingRules class.
-	 * @param mappingRules Node that represents the mapping rules for a given 
+	 * @param platformMappingRules Node that represents the mapping rules for a given
 	 * platform, e.g. node Platforms/RT-FemtoJava/Application/(Software or Hardware)
 	 */
 	public ApplicationMappingRules(String mappingRulesFileDir, Node platformMappingRules) {
@@ -759,7 +759,7 @@ public class ApplicationMappingRules {
 	 */
 	public String getAspectAdaptationScript(AspectAdaptation adaptation) {
 		int i = BinarySearch.binarySearchString(AspectAdaptations, 
-				adaptation.getAspect().getName() + "." + adaptation.getName());
+				adaptation.getOwner().getName() + "." + adaptation.getName());
 		if (i > 0)
 			return AdaptationsScripts.get(i);
 		else
@@ -774,7 +774,7 @@ public class ApplicationMappingRules {
 	 */
 	public Integer getAspectAdaptationOrder(AspectAdaptation adaptation) {
 		int i = BinarySearch.binarySearchString(AspectAdaptations, 
-				adaptation.getAspect().getName() + "." + adaptation.getName());
+				adaptation.getOwner().getName() + "." + adaptation.getName());
 		if (i > 0)
 			return AdaptationsOrder.get(i);
 		else
@@ -789,7 +789,7 @@ public class ApplicationMappingRules {
 	 */
 	public boolean isAdaptationAtModelLevel(AspectAdaptation adaptation) {
 		int i = BinarySearch.binarySearchString(AspectAdaptations, 
-				adaptation.getAspect().getName() + "." + adaptation.getName());
+				adaptation.getOwner().getName() + "." + adaptation.getName());
 		if (i > 0)
 			return AdaptationsMetaLevel.get(i);
 		else

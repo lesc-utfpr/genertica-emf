@@ -10,9 +10,8 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 
 import genertica.Exceptions.CodeGenerationException;
-import dercs.util.OutputLog;
 
-import dercs.DERCSHelper;
+import genertica.util.DERCSHelper;
 import dercs.AO.Aspect;
 import dercs.AO.BehavioralAdaptation;
 import dercs.AO.Crosscutting;
@@ -44,6 +43,8 @@ import dercs.structure.Method;
 import dercs.structure.ParameterKind;
 import dercs.structure.Visibility;
 import dercs.structure.Class;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents the source code fragment of a class. A class can contain:
@@ -77,7 +78,7 @@ public class CodeGenerator {
 	private String GeneratedCodeFragment = null;
 	
 	// log support
-	protected OutputLog m_Log;
+	protected Logger LOGGER;
 	public static String CODE_GENERATION_ERROR_1000 = "Error-1000: Error in script execution.";
 	public static String CODE_GENERATION_ERROR_1001 = "Error-1001: Error in script execution for DATA TYPE";
 	public static String CODE_GENERATION_ERROR_1002 = "Error-1002: Error in script execution for ACTION";
@@ -94,21 +95,21 @@ public class CodeGenerator {
 	public static String CODE_GENERATION_ERROR_1013 = "Error-1013: Error while importing XML file of mapping rules.";
 	public static String CODE_GENERATION_ERROR_1014 = "Error-1014: Error in script execution for ENUMERATION DECLARATION";
 	
-	public CodeGenerator(ApplicationMappingRules amr, VelocityContext ctx, OutputLog log) {
+	public CodeGenerator(ApplicationMappingRules amr, VelocityContext ctx) {
 		AppMappingRules = amr;
 		VelocityCtx = ctx;
-		m_Log = log;
+		LOGGER = LoggerFactory.getLogger("GenERTiCA");
 	}
 	
 	/*
 	 * Prints an error message.
 	 */
 	private void printError(String error, Exception expt, String script) {
-		m_Log.println("\n\t   " + error, false);
-		m_Log.println("\t      " + expt.getMessage(), false);
-		m_Log.println("\t      -----", false);
-		m_Log.println(applyIdentation(script, "\t      "), false);
-		m_Log.println("\t      -----", false);
+		LOGGER.error("\n\t   " + error, false);
+		LOGGER.error("\t      " + expt.getMessage(), false);
+		LOGGER.error("\t      -----", false);
+		LOGGER.error(applyIdentation(script, "\t      "), false);
+		LOGGER.error("\t      -----", false);
 	}
 	
 	/**
@@ -494,7 +495,7 @@ public class CodeGenerator {
 		Behavior tmpBehavior = (Behavior)VelocityCtx.get(CodeGenerationEngine.BEHAVIOR);
 		if (tmpBehavior != null) {
 			weaveAspectAdaptationsAtModelLevel(tmpBehavior, PointcutList, true);
-			for(Iterator<Action> ita=tmpBehavior.getBehavioralElementsIterator(); ita.hasNext();) {
+			for(Iterator<BehavioralElement> ita=tmpBehavior.getBehavioralElements().iterator(); ita.hasNext();) {
 				BehavioralElement be = ita.next();
 				VelocityCtx.put(CodeGenerationEngine.IDENTATION_LEVEL, identationLevel);
 				
@@ -544,7 +545,7 @@ public class CodeGenerator {
 				}
 			}
 			else {
-				for(Iterator<Action> ita=tmpBehavior.getBehavioralElementsIterator(); ita.hasNext();) {
+				for(Iterator<BehavioralElement> ita=tmpBehavior.getBehavioralElements().iterator(); ita.hasNext();) {
 					BehavioralElement be = ita.next();
 					VelocityCtx.put(CodeGenerationEngine.IDENTATION_LEVEL, identationLevel);
 
@@ -593,7 +594,7 @@ public class CodeGenerator {
 		
 		Behavior tmpBehavior = (Behavior)VelocityCtx.get(CodeGenerationEngine.BEHAVIOR);
 		if (tmpBehavior != null) {
-			for(Iterator<LocalVariable> itv=tmpBehavior.getLocalVariablesIterator(); itv.hasNext();) {
+			for(Iterator<LocalVariable> itv=tmpBehavior.getLocalVariables().iterator(); itv.hasNext();) {
 				LocalVariable v = itv.next();
 				VelocityCtx.put(CodeGenerationEngine.IDENTATION_LEVEL, identationLevel);
 				
@@ -619,7 +620,7 @@ public class CodeGenerator {
 		
 		Behavior tmpBehavior = b;
 		if (tmpBehavior != null) {
-			for(Iterator<LocalVariable> itv=tmpBehavior.getLocalVariablesIterator(); itv.hasNext();) {
+			for(Iterator<LocalVariable> itv=tmpBehavior.getLocalVariables().iterator(); itv.hasNext();) {
 				LocalVariable v = itv.next();
 				VelocityCtx.put(CodeGenerationEngine.IDENTATION_LEVEL, identationLevel);
 				
@@ -1021,9 +1022,9 @@ public class CodeGenerator {
 							// affected element.
 							AssignmentAction aa = (AssignmentAction)crossOwner;
 							if (aa.isAssignmentOfActionResult()
-								&& ((aa.getAction() instanceof SendMessageAction)
-									|| (aa.getAction() instanceof ObjectAction))) {
-								crossOwner = aa.getAction();
+								&& ((aa.getResultOfAction() instanceof SendMessageAction)
+									|| (aa.getResultOfAction() instanceof ObjectAction))) {
+								crossOwner = aa.getResultOfAction();
 								VelocityCtx.remove(CodeGenerationEngine.ACTION);
 								VelocityCtx.put(CodeGenerationEngine.ACTION, crossOwner);
 							}
@@ -1031,13 +1032,13 @@ public class CodeGenerator {
 						if (crossOwner instanceof SendMessageAction) {
 							SendMessageAction sma = (SendMessageAction)crossOwner;
 							// this line could generate an exception!
-							crossOwner = ((dercs.structure.runtime.Object)sma.getToObject()).getInstanceOf();
+							crossOwner = ((dercs.structure.runtime.Object)sma.getToObject()).getInstanceOfClass();
 							VelocityCtx.put(CodeGenerationEngine.REFERENCED_CLASS, crossOwner);
 						}
 						else if (crossOwner instanceof ObjectAction) {
 							ObjectAction coa = (ObjectAction)crossOwner;
 							// this line could generate an exception!
-							crossOwner = coa.getObject().getInstanceOf();
+							crossOwner = coa.getRelatedObject().getInstanceOfClass();
 							VelocityCtx.put(CodeGenerationEngine.REFERENCED_CLASS, crossOwner);
 						}
 						else if (crossOwner instanceof Attribute) {
@@ -1053,22 +1054,22 @@ public class CodeGenerator {
 					// get the crosscuting information that the aspect 
 					// inserts in the affected element
 					Crosscutting crosscutting = null;
-					Aspect aspect = pc.getAdaptation().getAspect();
-					for(int i = aspect.getCrosscuttingCount()-1; (crosscutting == null) && (i >= 0); i--) {
-						if (aspect.getCrosscutting(i).getAffectedElement() == crossOwner)
-							crosscutting = aspect.getCrosscutting(i);
+					Aspect aspect = pc.getAspectAdaptation().getOwner();
+					for(int i = aspect.getCrosscutting().size()-1; (crosscutting == null) && (i >= 0); i--) {
+						if (aspect.getCrosscutting().get(i).getAffectedElement() == crossOwner)
+							crosscutting = aspect.getCrosscutting().get(i);
 						else if (crossOwner instanceof Behavior) {
 							Class cls = (Class)VelocityCtx.get(CodeGenerationEngine.REFERENCED_CLASS);
-							if (cls ==  aspect.getCrosscutting(i).getAffectedElement())
-								crosscutting = aspect.getCrosscutting(i);
+							if (cls ==  aspect.getCrosscutting().get(i).getAffectedElement())
+								crosscutting = aspect.getCrosscutting().get(i);
 						}
 						else if (crossOwner instanceof AssignmentAction) { 
 							AssignmentAction aa = (AssignmentAction)crossOwner;
 							if (aa.isAssignmentOfActionResult()
-								&& (aa.getAction() instanceof CreateObjectAction)) {
-								CreateObjectAction coa = (CreateObjectAction)aa.getAction();
-								if (aspect.getCrosscutting(i).getAffectedElement() == coa.getObject().getInstanceOf())
-									crosscutting = aspect.getCrosscutting(i);
+								&& (aa.getResultOfAction() instanceof CreateObjectAction)) {
+								CreateObjectAction coa = (CreateObjectAction)aa.getResultOfAction();
+								if (aspect.getCrosscutting().get(i).getAffectedElement() == coa.getRelatedObject().getInstanceOfClass())
+									crosscutting = aspect.getCrosscutting().get(i);
 							}
 						}
 					}
@@ -1077,7 +1078,7 @@ public class CodeGenerator {
 						VelocityCtx.put(CodeGenerationEngine.CROSSCUTTING, crosscutting);
 					
 					GeneratedCodeFragment = result;
-					String script = AppMappingRules.getAspectAdaptationScript(pc.getAdaptation());
+					String script = AppMappingRules.getAspectAdaptationScript(pc.getAspectAdaptation());
 
 					if (script.trim().compareTo("") != 0) {
 						// execute the adaptation script
@@ -1180,11 +1181,11 @@ public class CodeGenerator {
 			ArrayList<Pointcut> result = new ArrayList<Pointcut>();
 			for(int i=0; i < pointcuts.size(); i++) {
 				Pointcut pc = pointcuts.get(i);
-				if (((behavioral && (pc.getAdaptation() instanceof BehavioralAdaptation))
-					|| (structural && (pc.getAdaptation() instanceof StructuralAdaptation)))
+				if (((behavioral && (pc.getAspectAdaptation() instanceof BehavioralAdaptation))
+					|| (structural && (pc.getAspectAdaptation() instanceof StructuralAdaptation)))
 					// select the pointcut if metaLevel is false or if metaLevel 
 					// is true and the pointcut applies the adaptation at model level  
-					&& (!metaLevel || (metaLevel && AppMappingRules.isAdaptationAtModelLevel(pc.getAdaptation())))) {
+					&& (!metaLevel || (metaLevel && AppMappingRules.isAdaptationAtModelLevel(pc.getAspectAdaptation())))) {
 					if (affectedPositions != null) {
 						int j = 0;
 						for(; (j < affectedPositions.length) && (pc.getRelativePosition() != affectedPositions[j]); j++);
