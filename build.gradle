@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+    id 'eclipse'
+}
+
+group = 'genertica'
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation libs.junit.api
+    testRuntimeOnly libs.junit.runtime
+
+    implementation libs.emf.common
+    implementation libs.emf.ecore
+
+    implementation libs.slf4j.api
+    runtimeOnly libs.logback
+
+    implementation project(':dercs-emf')
+}
+
+test {
+    useJUnitPlatform()
+}
+
+//version '1.0-SNAPSHOT'

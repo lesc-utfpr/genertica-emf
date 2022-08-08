@@ -1,0 +1,22 @@
+[versions]
+junit = "5.8.1"
+
+slf4j = "1.7.23"
+logback = "1.2.11"
+
+emfcommon = "2.24.0"
+emfecore = "2.26.0"
+
+[libraries]
+junit-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
+junit-runtime = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+
+slf4j-api = {module = "org.slf4j:slf4j-api", version.ref = "slf4j"}
+logback = {module = "ch.qos.logback:logback-classic", version.ref = "logback"}
+
+emf-common = { module = "org.eclipse.emf:org.eclipse.emf.common", version.ref = "emfcommon"}
+emf-ecore = { module = "org.eclipse.emf:org.eclipse.emf.ecore", version.ref = "emfecore"}
+
+[bundles]
+
+[plugins]
