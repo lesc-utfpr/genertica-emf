@@ -7,6 +7,8 @@ logback = "1.2.11"
 emfcommon = "2.24.0"
 emfecore = "2.26.0"
 
+velocity = "2.3"
+
 [libraries]
 junit-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
 junit-runtime = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
@@ -16,6 +18,8 @@ logback = {module = "ch.qos.logback:logback-classic", version.ref = "logback"}
 
 emf-common = { module = "org.eclipse.emf:org.eclipse.emf.common", version.ref = "emfcommon"}
 emf-ecore = { module = "org.eclipse.emf:org.eclipse.emf.ecore", version.ref = "emfecore"}
+
+velocity = { module = "org.apache.velocity:velocity-engine-core", version.ref = "velocity"}
 
 [bundles]
 

@@ -22,6 +22,8 @@ dependencies {
     implementation libs.slf4j.api
     runtimeOnly libs.logback
 
+    implementation libs.velocity
+
     implementation project(':dercs-emf')
 }
 
