@@ -212,10 +212,4 @@ public class CMD_GenERTiCA /*extends CommandLine*/ {
 			throw e;
 		}		
 	}
-
-	protected void run() {
-		// load project
-		System.out.print("++++++++++++++++++ Nothing to do here +++++++++++++++++");
-	}
-
 }

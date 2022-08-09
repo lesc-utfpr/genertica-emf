@@ -778,7 +778,7 @@ public class ApplicationMappingRules {
 		if (i > 0)
 			return AdaptationsOrder.get(i);
 		else
-			return new Integer(-1);
+			return Integer.valueOf(-1);
 	}
 	
 	/**

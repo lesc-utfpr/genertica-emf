@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 
+import dercs.loader.util.DercsAccessHelper;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.slf4j.Logger;
@@ -24,7 +25,7 @@ import genertica.util.QuickSort;
 
 import javax.xml.parsers.*;
 
-import dercs.DERCSFactory;
+import genertica.util.DERCSFactory;
 import genertica.util.DERCSHelper;
 import dercs.Model;
 import dercs.AO.Aspect;
@@ -421,7 +422,7 @@ public class CodeGenerationEngine {
 					// the list of aspects should be checked
 					canContinue = false;
 					for(Iterator<String> itfa = fileAspects.iterator(); (!canContinue) && itfa.hasNext();)
-						canContinue = (DERCSModel.getAspect(itfa.next()) != null);
+						canContinue = DercsAccessHelper.findNamedElement(DERCSModel.getAspects(), itfa.next()) != null;
 				}
 				if (canContinue) {
 					// it has at least one aspect associated with it, 
@@ -437,11 +438,11 @@ public class CodeGenerationEngine {
 							// checking the list of aspect that affect the fragment
 							// at least one must match
 							while ((!canContinue) && (aspects.indexOf(",") >= 0)) {
-								canContinue = (DERCSModel.getAspect(aspects.substring(0, aspects.indexOf(",")).trim()) != null);
+								canContinue = DercsAccessHelper.findNamedElement(DERCSModel.getAspects(), aspects.substring(0, aspects.indexOf(",")).trim()) != null;
 								aspects = aspects.substring(aspects.indexOf(",")+1).trim();
 							}
 							if (!canContinue)
-								canContinue = (DERCSModel.getAspect(aspects.trim()) != null);
+								canContinue = (DercsAccessHelper.findNamedElement(DERCSModel.getAspects(), aspects.trim()) != null);
 						}
 						if (canContinue
 							|| (aspects.equals("") && !canContinue)) {
