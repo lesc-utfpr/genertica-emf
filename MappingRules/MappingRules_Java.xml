@@ -48,7 +48,7 @@
               public enum $DataType.Name 
               $Options.BlockStart 
               #foreach ($v in $DataType.Values) 
-                #if ($velocityCount > 1) , #end 
+                #if ($foreach.count > 1) , #end 
                 \n$v 
               #end 
               \n$Option.BlockEnd
@@ -140,7 +140,7 @@
                 ${Message.Name}( 
                 #if ($Message.ParametersCount > 0) 
                   #foreach( $param in $Message.Parameters ) 
-                    #if ($velocityCount > 1), #end 
+                    #if ($foreach.count > 1), #end 
                     $CodeGenerator.getDataTypeStr($param.DataType) $param.Name 
                   #end 
                 #end 
@@ -229,7 +229,7 @@
               new ${Action.Object.InstanceOf.Name}(
               #if ($Action.ParametersValuesCount > 0)
                 #foreach( $x in $Action.ParametersValues )
-                  #if ($velocityCount > 1), #end
+                  #if ($foreach.count > 1), #end
                   $x
                 #end
               #end
@@ -274,8 +274,8 @@
                 ${Action.RelatedMethod.Name}(
                 #if ($Action.ParametersValuesCount > 0)
                   #foreach($param in $Action.getParametersValues())
-                    #if ($velocityCount > 1), #end
-                    #set( $x =  $velocityCount - 1)
+                    #if ($foreach.count > 1), #end
+                    #set( $x =  $foreach.count - 1)
                     #if ($Action.isParameterValue($x))
                       ${param}
                     #else
@@ -300,8 +300,8 @@
                 ${Action.RelatedMethod.Name}(
                 #if ($Action.ParametersValuesCount > 0)
                   #foreach($param in $Action.getParametersValues())
-                    #if ($velocityCount > 1), #end
-                    #set( $x =  $velocityCount - 1)
+                    #if ($foreach.count > 1), #end
+                    #set( $x =  $foreach.count - 1)
                     #if ($Action.isParameterValue($x)) 
                       ${param}
                     #else
@@ -407,7 +407,7 @@
               <Structural Name="WCET" Order="3" ModelLevel="no">
                 private static RelativeTime _Cost = new RelativeTime(0,0,0);
               </Structural>
-              <Structural Name="ModityClassStructure" Order="0" ModelLevel="yes">
+              <Structural Name="ModifyClassStructure" Order="0" ModelLevel="yes">
                 $DERCSHelper.changeSuperClass($Class, $DERCSFactory.newClass("RealtimeThread", null, true), true)
               </Structural>
               <Structural Name="ModifyConstructor" Order="0" ModelLevel="yes">
@@ -794,7 +794,7 @@
         <Files xmlns:xi="http://www.w3.org/2001/XInclude">
           <xi:include href="./platform_RT-FemtoJava/AbsoluteTime.xml"/>
           <xi:include href="./platform_RT-FemtoJava/AbstractPoolingServer.xml"/>
-          <xi:include href="./platform_RT-FemtoJava/AicParameters.xml"/>
+          <!-- <xi:include href="./platform_RT-FemtoJava/AicParameters.xml"/> -->
           <xi:include href="./platform_RT-FemtoJava/AsyncEvent.xml"/>
           <xi:include href="./platform_RT-FemtoJava/AsyncEventHandler.xml"/>
           <xi:include href="./platform_RT-FemtoJava/AsyncEventsMechanism.xml"/>
