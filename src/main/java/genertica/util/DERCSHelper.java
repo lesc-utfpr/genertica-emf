@@ -21,6 +21,8 @@ import dercs.datatypes.DataType;
 import dercs.datatypes.Enumeration;
 //import dercs.exceptions.DERCSLoaderException;
 //import dercs.exceptions.InvalidRelativePosition;
+import dercs.loader.exception.DercsLoaderException;
+import dercs.loader.exception.InvalidRelativePositionException;
 import dercs.loader.util.DercsCreationHelper;
 import dercs.structure.Attribute;
 import dercs.structure.Class;
@@ -31,7 +33,7 @@ import dercs.structure.Parameter;
 import dercs.structure.ParameterKind;
 import dercs.structure.Visibility;
 import dercs.structure.runtime.ActiveObject;
-import dercs.structure.runtime.Object;
+import java.lang.Object;
 import dercs.structure.runtime.PassiveObject;
 //import dercs.util.UMLMetaModelHelper;
 
@@ -454,7 +456,7 @@ public class DERCSHelper {
      * @return The object found, or NULL when there is no object with the given name.
      */
     public static dercs.structure.runtime.Object searchForObject(String objName,
-                                                                 List<Object> objList, boolean partialMatch) {
+                                                                 List<dercs.structure.runtime.Object> objList, boolean partialMatch) {
         int i=0;
         for(; (i < objList.size()) &&
                 (((partialMatch == false) && (objList.get(i).getName().compareTo(objName) != 0))
@@ -465,27 +467,27 @@ public class DERCSHelper {
             return null;
     }
 
-//    /**
-//     * Get the relative position value whose name is equal to the string passed as paramenter.
-//     * @param relativePostion Relative postion name.
-//     * @return The relative position.
-//     */
-//    public static RelativePosition getRelativePosition(String relativePostion) throws DERCSLoaderException {
-//        if (relativePostion.compareTo(RelativePosition.ADD_NEW_FEATURE.toString()) == 0)
-//            return RelativePosition.ADD_NEW_FEATURE;
-//        else if (relativePostion.compareTo(RelativePosition.AFTER.toString()) == 0)
-//            return RelativePosition.AFTER;
-//        else if (relativePostion.compareTo(RelativePosition.AROUND.toString()) == 0)
-//            return RelativePosition.AROUND;
-//        else if (relativePostion.compareTo(RelativePosition.BEFORE.toString()) == 0)
-//            return RelativePosition.BEFORE;
-//        else if (relativePostion.compareTo(RelativePosition.MODIFY_STRUCTURE.toString()) == 0)
-//            return RelativePosition.MODIFY_STRUCTURE;
-//        else if (relativePostion.compareTo(RelativePosition.REPLACE.toString()) == 0)
-//            return RelativePosition.REPLACE;
-//        else
-//            throw new InvalidRelativePosition(relativePostion);
-//    }
+    /**
+     * Get the relative position value whose name is equal to the string passed as paramenter.
+     * @param relativePostion Relative postion name.
+     * @return The relative position.
+     */
+    public static RelativePosition getRelativePosition(String relativePostion) throws DercsLoaderException {
+        if (relativePostion.compareTo(RelativePosition.ADD_NEW_FEATURE.toString()) == 0)
+            return RelativePosition.ADD_NEW_FEATURE;
+        else if (relativePostion.compareTo(RelativePosition.AFTER.toString()) == 0)
+            return RelativePosition.AFTER;
+        else if (relativePostion.compareTo(RelativePosition.AROUND.toString()) == 0)
+            return RelativePosition.AROUND;
+        else if (relativePostion.compareTo(RelativePosition.BEFORE.toString()) == 0)
+            return RelativePosition.BEFORE;
+        else if (relativePostion.compareTo(RelativePosition.MODIFY_STRUCTURE.toString()) == 0)
+            return RelativePosition.MODIFY_STRUCTURE;
+        else if (relativePostion.compareTo(RelativePosition.REPLACE.toString()) == 0)
+            return RelativePosition.REPLACE;
+        else
+            throw new InvalidRelativePositionException(relativePostion);
+    }
 
     /**
      * Test if the object is an instance of AssignmentAction class.
@@ -740,25 +742,25 @@ public class DERCSHelper {
         return result;
     }
 
-//    public static HashSet<Enumeration> getListOfEnumerationsUsedInClass(Class cl) {
-//        HashSet<Enumeration> result = new HashSet<Enumeration>();
-//
-//        for(Iterator<Attribute> ita = cl.getAttributesIterator(); ita.hasNext();) {
-//            Attribute attr = ita.next();
-//            if (attr.getDataType() instanceof Enumeration)
-//                result.add((Enumeration)attr.getDataType());
-//        }
-//        for(Iterator<Method> itm = cl.getMethodsIterator(); itm.hasNext();) {
-//            Method mth = itm.next();
-//            for(Iterator<Parameter> itp = mth.getParametersIterator(); itp.hasNext();) {
-//                Parameter par = itp.next();
-//                if (par.getDataType() instanceof Enumeration)
-//                    result.add((Enumeration)par.getDataType());
-//            }
-//        }
-//
-//        return result;
-//    }
+    public static HashSet<Enumeration> getListOfEnumerationsUsedInClass(Class cl) {
+        HashSet<Enumeration> result = new HashSet<Enumeration>();
+
+        for(Iterator<Attribute> ita = cl.getAttributes().iterator(); ita.hasNext();) {
+            Attribute attr = ita.next();
+            if (attr.getDataType() instanceof Enumeration)
+                result.add((Enumeration)attr.getDataType());
+        }
+        for(Iterator<Method> itm = cl.getMethods().iterator(); itm.hasNext();) {
+            Method mth = itm.next();
+            for(Iterator<Parameter> itp = mth.getParameters().iterator(); itp.hasNext();) {
+                Parameter par = itp.next();
+                if (par.getDataType() instanceof Enumeration)
+                    result.add((Enumeration)par.getDataType());
+            }
+        }
+
+        return result;
+    }
 
     /**
      * Check if a send message action involves objects deployed in different
@@ -851,87 +853,87 @@ public class DERCSHelper {
         return mth.getVisibility() == Visibility.PRIVATE;
     }
 
-//    /**
-//     * Get the Attribute list used in a method behavior.
-//     * @param Class the class of the method analyzed
-//     * @param msgName the name of method analyzed
-//     * @param type inform if the function must collect the attributes read(0) or write(1) in the method
-//     * @return HashSet of Attributes used in the method.
-//     */
-//    public static HashSet<Attribute> getListOfAttributesUsed(Class cls, String msgName, int type){
-//        HashSet<String> list = new HashSet<String>();
-//
-//        HashSet<Attribute> attrList = new HashSet<Attribute>();
-//        Method mth = cls.getMethod(msgName);
-//        if (mth != null){
-//            Behavior be = mth.getTriggeredBehavior();
-//
-//            if (be != null){
-//                if (type == 0) { // read values
-//                    for(Iterator<BehavioralElement> BeEl =  be.getBeharioralElements().iterator(); BeEl.hasNext();){
-//                        BehavioralElement element = BeEl.next();
-//                        list.addAll(getListValuesRead(element));
-//                    }
-//                }else if (type == 1){ // write values
-//                    for(Iterator<BehavioralElement> BeEl =  be.getBeharioralElements().iterator(); BeEl.hasNext();){
-//                        BehavioralElement element = BeEl.next();
-//                        list.addAll(getListValuesWrite(element));
-//                    }
-//                }
-//            }
-//        }
-//
-//        attrList.addAll(getAttributeListFromName(cls,list));
-//        return attrList;
-//
-//    }
+    /**
+     * Get the Attribute list used in a method behavior.
+     * @param Class the class of the method analyzed
+     * @param msgName the name of method analyzed
+     * @param type inform if the function must collect the attributes read(0) or write(1) in the method
+     * @return HashSet of Attributes used in the method.
+     */
+    public static HashSet<Attribute> getListOfAttributesUsed(Class cls, String msgName, int type){
+        HashSet<String> list = new HashSet<String>();
 
-//    public static HashSet<String> getListValuesRead(BehavioralElement be){
-//        HashSet<String> list = new HashSet<String>();
-//
-//        if (be instanceof AssignmentAction)  {
-//            AssignmentAction a = (AssignmentAction)be;
-//            if (!a.isAssignmentOfValue()){
-//                if (a.isAssignmentOfActionResult()){
-//                    if (a.getAction() instanceof ExpressionAction)
-//                        list.addAll(UMLMetaModelHelper.getElementOfExpression(a.getAction().toString(),false));
-//                    else if (a.getAction() instanceof SendMessageAction){
-//                        SendMessageAction aa = (SendMessageAction)a.getAction();
-//                        if (aa.getRelatedMethod().isGetSetMethod())
-//                            list.add(aa.getRelatedMethod().getAssociatedAttribute().getName());
-//                    }
-//                }else
-//                    list.add(a.getAction().toString());
-//            }
-//        }else if (be instanceof ExpressionAction){
-//            ExpressionAction ea = (ExpressionAction)be;
-//            list.addAll(UMLMetaModelHelper.getElementOfExpression(ea.getExpression(),false));
-//        }else if (be instanceof SendMessageAction){
-//            SendMessageAction sma = (SendMessageAction)be;
-//            int i = 0;
-//            for (i = 0; i <= sma.getParametersValuesCount()-1;i++){
-//                if (sma.isParameterAttribute(i))
-//                    list.add(sma.getParameterAttribute(i).getName());
-//                else if (sma.isParameterVariable(i))
-//                    list.add(sma.getParameterVariable(i).getName());
-//                else if (sma.isParameterValue(i))
-//                    list.add(sma.getParameterValue(i));
-//            }
-//        }else if (be instanceof Behavior){
-//            Behavior bh = (Behavior)be;
-//
-//            list.addAll(UMLMetaModelHelper.getElementOfExpression(bh.getEnterCondition(), false));
-//            if (bh.hasAlternativeBehavior()){
-//                list.addAll(UMLMetaModelHelper.getElementOfExpression(bh.getAlternativeBehavior().getEnterCondition(), false));
-//                list.addAll(getListValuesRead(bh.getAlternativeBehavior()));
-//            }
-//            Iterator<BehavioralElement> bei =  bh.getBeharioralElements().iterator();
-//            while (bei.hasNext()){
-//                list.addAll(getListValuesRead(bei.next()));
-//            }
-//        }
-//        return list;
-//    }
+        HashSet<Attribute> attrList = new HashSet<Attribute>();
+        Method mth = cls.getMethod(msgName);
+        if (mth != null){
+            Behavior be = mth.getTriggeredBehavior();
+
+            if (be != null){
+                if (type == 0) { // read values
+                    for(Iterator<BehavioralElement> BeEl =  be.getBehavioralElements().iterator(); BeEl.hasNext();){
+                        BehavioralElement element = BeEl.next();
+                        list.addAll(getListValuesRead(element));
+                    }
+                }else if (type == 1){ // write values
+                    for(Iterator<BehavioralElement> BeEl =  be.getBehavioralElements().iterator(); BeEl.hasNext();){
+                        BehavioralElement element = BeEl.next();
+                        list.addAll(getListValuesWrite(element));
+                    }
+                }
+            }
+        }
+
+        attrList.addAll(getAttributeListFromName(cls,list));
+        return attrList;
+
+    }
+
+    public static HashSet<String> getListValuesRead(BehavioralElement be){
+        HashSet<String> list = new HashSet<String>();
+
+        if (be instanceof AssignmentAction)  {
+            AssignmentAction a = (AssignmentAction)be;
+            if (!a.isAssignmentOfValue()){
+                if (a.isAssignmentOfActionResult()){
+                    if (a.getResultOfAction() instanceof ExpressionAction)
+                        list.addAll(UMLMetaModelHelper.getElementOfExpression(a.getResultOfAction().toString(),false));
+                    else if (a.getResultOfAction() instanceof SendMessageAction){
+                        SendMessageAction aa = (SendMessageAction)a.getResultOfAction();
+                        if (aa.getRelatedMethod().isGetSetMethod())
+                            list.add(aa.getRelatedMethod().getAssociatedAttribute().getName());
+                    }
+                }else
+                    list.add(a.getResultOfAction().toString());
+            }
+        }else if (be instanceof ExpressionAction){
+            ExpressionAction ea = (ExpressionAction)be;
+            list.addAll(UMLMetaModelHelper.getElementOfExpression(ea.getExpression(),false));
+        }else if (be instanceof SendMessageAction){
+            SendMessageAction sma = (SendMessageAction)be;
+            int i = 0;
+            for (i = 0; i <= sma.getParameterValues().size()-1;i++){
+                if (sma.getParameterValues().get(i) instanceof Attribute)
+                    list.add(((Attribute) sma.getParameterValues().get(i)).getName());
+                else if (sma.getParameterValues().get(i) instanceof LocalVariable)
+                    list.add(((LocalVariable) sma.getParameterValues().get(i)).getName());
+                else if (sma.getParameterValues().get(i) instanceof String)
+                    list.add((String)sma.getParameterValues().get(i));
+            }
+        }else if (be instanceof Behavior){
+            Behavior bh = (Behavior)be;
+
+            list.addAll(UMLMetaModelHelper.getElementOfExpression(bh.getEnterCondition(), false));
+            if (bh.hasAlternativeBehavior()){
+                list.addAll(UMLMetaModelHelper.getElementOfExpression(bh.getAlternateBehavior().getEnterCondition(), false));
+                list.addAll(getListValuesRead(bh.getAlternateBehavior()));
+            }
+            Iterator<BehavioralElement> bei =  bh.getBehavioralElements().iterator();
+            while (bei.hasNext()){
+                list.addAll(getListValuesRead(bei.next()));
+            }
+        }
+        return list;
+    }
 
     public static HashSet<String> getListValuesWrite(BehavioralElement be){
         HashSet<String> list = new HashSet<String>();
@@ -988,39 +990,39 @@ public class DERCSHelper {
         return  msg.getMessageSort() == MessageSort.ASYNCHCALL;
     }
 
-//    public static boolean hasAsynchrnousBehavior(Class cls, String mthMain, Method msg){
-//        boolean result = false;
-//        Method mth = cls.getMethod(mthMain);
-//        if (mth != null){
-//            Behavior be = mth.getTriggeredBehavior();
-//
-//            if (be != null){
-//                for(Iterator<BehavioralElement> BeEl =  be.getBeharioralElements().iterator(); BeEl.hasNext() && !result;){
-//                    BehavioralElement element = BeEl.next();
-//                    result = checkMessageSortBehavior(element,1,msg);
-//                }
-//            }
-//        }
-//
-//        return result;
-//    }
-//
-//    public static boolean hasSynchrnousBehavior(Class cls, String mthMain, Method msg){
-//        boolean result = false;
-//        Method mth = cls.getMethod(mthMain);
-//        if (mth != null){
-//            Behavior be = mth.getTriggeredBehavior();
-//
-//            if (be != null){
-//                for(Iterator<BehavioralElement> BeEl =  be.getBeharioralElements().iterator(); BeEl.hasNext() && !result;){
-//                    BehavioralElement element = BeEl.next();
-//                    result = checkMessageSortBehavior(element,0,msg);
-//                }
-//            }
-//        }
-//
-//        return result;
-//    }
+    public static boolean hasAsynchrnousBehavior(Class cls, String mthMain, Method msg){
+        boolean result = false;
+        Method mth = cls.getMethod(mthMain);
+        if (mth != null){
+            Behavior be = mth.getTriggeredBehavior();
+
+            if (be != null){
+                for(Iterator<BehavioralElement> BeEl =  be.getBehavioralElements().iterator(); BeEl.hasNext() && !result;){
+                    BehavioralElement element = BeEl.next();
+                    result = checkMessageSortBehavior(element,1,msg);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public static boolean hasSynchrnousBehavior(Class cls, String mthMain, Method msg){
+        boolean result = false;
+        Method mth = cls.getMethod(mthMain);
+        if (mth != null){
+            Behavior be = mth.getTriggeredBehavior();
+
+            if (be != null){
+                for(Iterator<BehavioralElement> BeEl =  be.getBehavioralElements().iterator(); BeEl.hasNext() && !result;){
+                    BehavioralElement element = BeEl.next();
+                    result = checkMessageSortBehavior(element,0,msg);
+                }
+            }
+        }
+
+        return result;
+    }
 
     public static boolean checkMessageSortBehavior(BehavioralElement be, int type, Method msg){
         boolean result = false;
@@ -1122,15 +1124,15 @@ public class DERCSHelper {
         return mth;
     }
 
-//    public static HashSet<Attribute> getListAtributesinExpression(String expression, Class cls){
-//        HashSet<Attribute> attr = new HashSet<Attribute>();
-//        HashSet<String> list = new HashSet<String>();
-//
-//        list.addAll(UMLMetaModelHelper.getElementOfExpression(expression, false));
-//        attr.addAll(getAttributeListFromName(cls,list));
-//
-//        return attr;
-//    }
+    public static HashSet<Attribute> getListAtributesinExpression(String expression, Class cls){
+        HashSet<Attribute> attr = new HashSet<Attribute>();
+        HashSet<String> list = new HashSet<String>();
+
+        list.addAll(UMLMetaModelHelper.getElementOfExpression(expression, false));
+        attr.addAll(getAttributeListFromName(cls,list));
+
+        return attr;
+    }
 
     public static void addAttributeToClass(Class cls, String attrName, DataType dtType, String defaultValue, Boolean isReadOnly){
         cls.addAttribute(attrName,dtType,Visibility.PRIVATE,false,defaultValue,isReadOnly);

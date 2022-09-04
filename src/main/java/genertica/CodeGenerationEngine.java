@@ -124,6 +124,10 @@ public class CodeGenerationEngine {
 	public CodeGenerationEngine(Model dercsModel) throws Exception {
 		DERCSModel = dercsModel;
 		LOGGER = LoggerFactory.getLogger("GenERTiCA");
+
+		Logger veloLogger = LoggerFactory.getLogger("Velocity");
+		Velocity.setProperty(Velocity.RUNTIME_LOG_INSTANCE, veloLogger);
+		Velocity.setProperty(Velocity.RUNTIME_LOG_REFERENCE_LOG_INVALID, true);
 		Velocity.init();
 		createContext();
 	}
@@ -318,7 +322,13 @@ public class CodeGenerationEngine {
 									&& (((AssignmentAction)be)).isAssignmentOfActionResult()) {
 									tmp = getPointcutsSelecting(((AssignmentAction)be).getResultOfAction());
 									if (tmp != null) {
-										exclusiveAddAll(pointcuts, tmp);
+										if (pointcuts == null)
+											// there is no pointcut selecting the method,
+											// but some of the actions within it are select.
+											// Thus is is necessary to instantiate the list.
+											pointcuts = new ArrayList<Pointcut>(tmp);
+										else
+											exclusiveAddAll(pointcuts, tmp);
 									}									
 								}
 							}
