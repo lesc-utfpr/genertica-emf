@@ -15,3 +15,19 @@ If you have already cloned without doing this, the submodule can also be initial
 ## Building
 Run `./gradlew build` (or `gradlew.bat build` for the windows command prompt) in a terminal.  
 The built distribution can be found in the `build/distributions/` directory.
+
+## Running
+To generate source code for an Eclipse Papyrus UML model,
+run GenERTiCA using the following command:  
+`./GenERTiCA [Path to model .uml file] [Path to mapping rules .xml] [Path of output directory]`  
+(or `GenERTiCA.bat` when using the windows command promt)
+
+The executable to run can be found in the `bin/` directory of a built
+GenERTiCA distribution. (See [Building](#building))
+
+## Demo
+An example UML model to try GenERTiCA can be found here:   
+https://github.com/lesc-utfpr/amode-rt-case-studies/tree/master/uml-models-papyrus/Wheelchair  
+The mapping rules passed to GenERTiCA should be the included file  `MappingRules/MappingRules_Java.xml`.
+
+(See [Running](#running) for how information on how to invoke GenERTiCA.)
